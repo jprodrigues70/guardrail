@@ -5,8 +5,10 @@
   var LEGACY_PREFIX_KEY = "urlPrefixes";
   var BORDER_ID = "pmfm-page-border-overlay";
   var BANNER_ID = "pmfm-top-banner";
+  var URL_CHANGE_EVENT = "pmfm:urlchange";
   var BODY_BASE_PADDING_BOTTOM_ATTR = "data-pmfm-base-padding-bottom";
   var BODY_INLINE_PADDING_BOTTOM_ATTR = "data-pmfm-inline-padding-bottom";
+  var lastKnownHref = window.location.href;
 
   var DEFAULT_PROFILES = [
     { id: "work", name: "Trabalho", enabled: true },
@@ -399,11 +401,39 @@
     });
   }
 
+  function onPossibleUrlChange() {
+    var currentHref = window.location.href;
+    if (currentHref === lastKnownHref) return;
+    lastKnownHref = currentHref;
+    updateBorderFromSettings();
+  }
+
+  function patchHistoryMethod(methodName) {
+    var original = history[methodName];
+    if (typeof original !== "function") return;
+
+    history[methodName] = function () {
+      var result = original.apply(this, arguments);
+      window.dispatchEvent(new Event(URL_CHANGE_EVENT));
+      return result;
+    };
+  }
+
+  function setupSpaUrlObserver() {
+    patchHistoryMethod("pushState");
+    patchHistoryMethod("replaceState");
+
+    window.addEventListener("popstate", onPossibleUrlChange);
+    window.addEventListener("hashchange", onPossibleUrlChange);
+    window.addEventListener(URL_CHANGE_EVENT, onPossibleUrlChange);
+  }
+
   chrome.storage.onChanged.addListener(function (changes, areaName) {
     if (areaName !== "sync") return;
     if (!changes[STORAGE_KEY] && !changes[LEGACY_PREFIX_KEY]) return;
     updateBorderFromSettings();
   });
 
+  setupSpaUrlObserver();
   updateBorderFromSettings();
 })();
