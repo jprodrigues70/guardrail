@@ -6,9 +6,11 @@
   var BORDER_ID = "pmfm-page-border-overlay";
   var BANNER_ID = "pmfm-top-banner";
   var URL_CHANGE_EVENT = "pmfm:urlchange";
+  var URL_POLL_INTERVAL_MS = 500;
   var BODY_BASE_PADDING_BOTTOM_ATTR = "data-pmfm-base-padding-bottom";
   var BODY_INLINE_PADDING_BOTTOM_ATTR = "data-pmfm-inline-padding-bottom";
   var lastKnownHref = window.location.href;
+  var urlPollTimer = null;
 
   var DEFAULT_PROFILES = [
     { id: "work", name: "Trabalho", enabled: true },
@@ -426,6 +428,20 @@
     window.addEventListener("popstate", onPossibleUrlChange);
     window.addEventListener("hashchange", onPossibleUrlChange);
     window.addEventListener(URL_CHANGE_EVENT, onPossibleUrlChange);
+    window.addEventListener("pageshow", onPossibleUrlChange);
+    window.addEventListener("focus", onPossibleUrlChange);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) onPossibleUrlChange();
+    });
+
+    // Fallback para SPAs que alteram URL sem disparar eventos esperados
+    // (ou sobrescrevem history internamente).
+    if (!urlPollTimer) {
+      urlPollTimer = window.setInterval(
+        onPossibleUrlChange,
+        URL_POLL_INTERVAL_MS,
+      );
+    }
   }
 
   chrome.storage.onChanged.addListener(function (changes, areaName) {

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "GuardRail",
   "description": "Aplica alerta visual configuravel quando a URL combina com regras definidas pelo usuario.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "permissions": ["storage", "tabs"],
   "content_scripts": [
     {
