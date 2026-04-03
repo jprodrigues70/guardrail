@@ -32,6 +32,7 @@
       lineStyle: "solid",
     },
     bannerEnabled: true,
+    bannerAlwaysMinimized: false,
     bannerText: "Ambiente sensível",
     confirmDelete: true,
   };
@@ -231,6 +232,10 @@
         typeof config.bannerEnabled === "boolean"
           ? config.bannerEnabled
           : DEFAULT_CONFIG.bannerEnabled,
+      bannerAlwaysMinimized:
+        typeof config.bannerAlwaysMinimized === "boolean"
+          ? config.bannerAlwaysMinimized
+          : DEFAULT_CONFIG.bannerAlwaysMinimized,
       bannerText: sanitizeText(config.bannerText) || DEFAULT_CONFIG.bannerText,
       confirmDelete:
         typeof config.confirmDelete === "boolean"
@@ -286,6 +291,7 @@
       profileStyles: clone(DEFAULT_CONFIG.profileStyles),
       style: clone(DEFAULT_CONFIG.style),
       bannerEnabled: DEFAULT_CONFIG.bannerEnabled,
+      bannerAlwaysMinimized: DEFAULT_CONFIG.bannerAlwaysMinimized,
       bannerText: DEFAULT_CONFIG.bannerText,
       confirmDelete: DEFAULT_CONFIG.confirmDelete,
     };

@@ -89,6 +89,9 @@
           profileText: "Perfil: " + profileName,
           urlText: "URL detectada: " + matchDetails.reason.detectedUrl,
         },
+        {
+          alwaysMinimized: Boolean(config.bannerAlwaysMinimized),
+        },
       );
     } else {
       pageRenderer.removeBanner();

@@ -34,6 +34,9 @@
   var borderWidth = document.getElementById("border-width");
   var borderStyle = document.getElementById("border-style");
   var bannerEnabled = document.getElementById("banner-enabled");
+  var bannerAlwaysMinimized = document.getElementById(
+    "banner-always-minimized",
+  );
 
   var confirmDeleteInput = document.getElementById("confirm-delete");
   var exportButton = document.getElementById("export-config");
@@ -108,6 +111,9 @@
     borderWidth.value = String(currentConfig.style.width);
     borderStyle.value = currentConfig.style.lineStyle;
     bannerEnabled.checked = currentConfig.bannerEnabled;
+    bannerAlwaysMinimized.checked = Boolean(
+      currentConfig.bannerAlwaysMinimized,
+    );
     confirmDeleteInput.checked = currentConfig.confirmDelete;
   }
 
@@ -621,6 +627,13 @@
       currentConfig.bannerEnabled = bannerEnabled.checked;
       saveConfig(function () {
         showFeedback("Mensagem fixa atualizada.", false);
+      });
+    });
+
+    bannerAlwaysMinimized.addEventListener("change", function () {
+      currentConfig.bannerAlwaysMinimized = bannerAlwaysMinimized.checked;
+      saveConfig(function () {
+        showFeedback("Preferência de minimização atualizada.", false);
       });
     });
 

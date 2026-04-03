@@ -93,12 +93,16 @@
   function createPageAlertRenderer(options) {
     var borderId = options.borderId;
     var bannerId = options.bannerId;
-    var floatingToggleId = bannerId + "-floating-toggle";
+    var ribbonToggleId = bannerId + "-ribbon-toggle";
     var bodyBasePaddingBottomAttr = options.bodyBasePaddingBottomAttr;
     var bodyInlinePaddingBottomAttr = options.bodyInlinePaddingBottomAttr;
     var bannerOutsideClickHandler = null;
     var bannerEscapeHandler = null;
     var bannerIsMinimized = false;
+    var bannerAlwaysMinimized = false;
+    var temporaryExpandedByUser = false;
+    var currentBannerColor = "#d40000";
+    var currentBannerText = "Ambiente";
 
     function stripPrefix(text, prefix) {
       if (typeof text !== "string") return "";
@@ -229,58 +233,76 @@
       body.removeAttribute(bodyInlinePaddingBottomAttr);
     }
 
-    function hideFloatingToggle() {
-      var floatingButton = document.getElementById(floatingToggleId);
-      if (floatingButton) floatingButton.hidden = true;
+    function minimizeBannerNow(color) {
+      var banner = document.getElementById(bannerId);
+      if (!banner) return;
+
+      bannerIsMinimized = true;
+      banner.hidden = true;
+      banner.style.display = "none";
+      clearBannerCompensation();
+      ensureRibbonToggle(color || currentBannerColor);
     }
 
-    function ensureFloatingToggle(color) {
-      var floatingButton = document.getElementById(floatingToggleId);
-      if (!floatingButton) {
-        floatingButton = document.createElement("button");
-        floatingButton.id = floatingToggleId;
-        floatingButton.type = "button";
-        floatingButton.className = "pmfm-floating-restore-button";
-        floatingButton.textContent = "GuardRail";
-        floatingButton.title = "Restaurar banner de alerta";
-        floatingButton.setAttribute("aria-label", "Restaurar banner de alerta");
-        floatingButton.style.position = "fixed";
-        floatingButton.style.left = "4px";
-        floatingButton.style.top = "4px";
-        floatingButton.style.height = "36px";
-        floatingButton.style.padding = "0 12px";
-        floatingButton.style.borderRadius = "999px";
-        floatingButton.style.border = "1px solid rgba(255, 255, 255, 0.28)";
-        floatingButton.style.color = "#ffffff";
-        floatingButton.style.fontFamily = "Segoe UI, sans-serif";
-        floatingButton.style.fontSize = "12px";
-        floatingButton.style.fontWeight = "700";
-        floatingButton.style.letterSpacing = "0.02em";
-        floatingButton.style.cursor = "pointer";
-        floatingButton.style.boxShadow = "0 10px 24px rgba(0, 0, 0, 0.32)";
-        floatingButton.style.backdropFilter = "blur(3px)";
-        floatingButton.style.zIndex = "2147483647";
+    function hideRibbonToggle() {
+      var ribbon = document.getElementById(ribbonToggleId);
+      if (ribbon) ribbon.hidden = true;
+    }
 
-        floatingButton.addEventListener("click", function () {
+    function ensureRibbonToggle(color) {
+      var ribbon = document.getElementById(ribbonToggleId);
+      if (!ribbon) {
+        ribbon = document.createElement("button");
+        ribbon.id = ribbonToggleId;
+        ribbon.type = "button";
+        ribbon.className = "pmfm-ribbon-restore-button";
+        ribbon.textContent = "";
+        ribbon.title = "Restaurar banner de alerta";
+        ribbon.setAttribute("aria-label", "Restaurar banner de alerta");
+        ribbon.style.position = "fixed";
+        ribbon.style.left = "0";
+        ribbon.style.top = "0";
+        ribbon.style.width = "0";
+        ribbon.style.height = "0";
+        ribbon.style.padding = "0";
+        ribbon.style.borderTop = "60px solid #d40000";
+        ribbon.style.borderBottom = "0px solid transparent";
+        ribbon.style.borderLeft = "0 solid transparent";
+        ribbon.style.borderRight = "60px solid transparent";
+        ribbon.style.background = "transparent";
+        ribbon.style.cursor = "pointer";
+        ribbon.style.zIndex = "2147483647";
+        ribbon.style.filter = "drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3))";
+
+        ribbon.addEventListener("click", function () {
           var banner = document.getElementById(bannerId);
           if (!banner) return;
+
+          if (bannerAlwaysMinimized) {
+            temporaryExpandedByUser = true;
+          }
+
           bannerIsMinimized = false;
           banner.hidden = false;
           banner.style.display = "block";
-          floatingButton.hidden = true;
+          ribbon.hidden = true;
           applyBannerCompensation(banner.offsetHeight || 0);
         });
 
-        document.documentElement.appendChild(floatingButton);
+        document.documentElement.appendChild(ribbon);
       }
 
-      floatingButton.hidden = false;
-      floatingButton.style.background =
-        "linear-gradient(135deg, " +
-        color +
-        " 0%, rgba(15, 23, 42, 0.88) 100%)";
+      ribbon.hidden = false;
+      ribbon.style.borderTopColor = color;
+      ribbon.title = currentBannerText + ". Clique para expandir";
+      ribbon.setAttribute(
+        "aria-label",
+        bannerAlwaysMinimized
+          ? "Banner minimizado permanentemente"
+          : "Restaurar banner de alerta",
+      );
 
-      return floatingButton;
+      return ribbon;
     }
 
     /**
@@ -290,7 +312,13 @@
      * @param {string} color Cor de fundo aplicada ao banner.
      * @param {object} details Informações de diagnóstico sobre a regra aplicada.
      */
-    function ensureBanner(text, color, details) {
+    function ensureBanner(text, color, details, options) {
+      var renderOptions =
+        options && typeof options === "object" ? options : Object.create(null);
+      bannerAlwaysMinimized = Boolean(renderOptions.alwaysMinimized);
+      currentBannerColor = color || currentBannerColor;
+      currentBannerText = text || currentBannerText;
+
       var banner = document.getElementById(bannerId);
       var title = null;
       var detailsButton = null;
@@ -410,13 +438,10 @@
 
         minimizeButton.addEventListener("click", function (event) {
           event.stopPropagation();
-          bannerIsMinimized = true;
+          temporaryExpandedByUser = false;
           detailsPopup.hidden = true;
           detailsButton.setAttribute("aria-expanded", "false");
-          banner.hidden = true;
-          banner.style.display = "none";
-          clearBannerCompensation();
-          ensureFloatingToggle(color);
+          minimizeBannerNow(color);
         });
 
         bannerOutsideClickHandler = function (event) {
@@ -482,16 +507,23 @@
       }
 
       if (bannerIsMinimized) {
-        banner.hidden = true;
-        banner.style.display = "none";
-        clearBannerCompensation();
-        ensureFloatingToggle(color);
+        minimizeBannerNow(color);
+        return;
+      }
+
+      if (bannerAlwaysMinimized && !temporaryExpandedByUser) {
+        bannerIsMinimized = true;
+        minimizeBannerNow(color);
         return;
       }
 
       banner.hidden = false;
       banner.style.display = "block";
-      hideFloatingToggle();
+      hideRibbonToggle();
+
+      if (!bannerAlwaysMinimized) {
+        temporaryExpandedByUser = false;
+      }
 
       applyBannerCompensation(banner.offsetHeight || 0);
     }
@@ -503,10 +535,12 @@
       var banner = document.getElementById(bannerId);
       if (banner) banner.remove();
 
-      var floatingButton = document.getElementById(floatingToggleId);
-      if (floatingButton) floatingButton.remove();
+      var ribbon = document.getElementById(ribbonToggleId);
+      if (ribbon) ribbon.remove();
 
       bannerIsMinimized = false;
+      bannerAlwaysMinimized = false;
+      temporaryExpandedByUser = false;
 
       if (bannerOutsideClickHandler) {
         document.removeEventListener("click", bannerOutsideClickHandler);
