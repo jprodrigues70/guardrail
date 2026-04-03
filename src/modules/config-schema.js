@@ -7,16 +7,16 @@
   var LEGACY_PREFIX_KEY = "urlPrefixes";
 
   var RULE_TYPES = {
-    startsWith: "Comeca com",
-    contains: "Contem",
+    startsWith: "Começa com",
+    contains: "Contém",
     regex: "Regex",
-    domain: "Dominio exato",
+    domain: "Domínio exato",
   };
 
   var DEFAULT_PROFILES = [
     { id: "work", name: "Trabalho", enabled: true },
-    { id: "production", name: "Producao", enabled: true },
-    { id: "staging", name: "Homologacao", enabled: true },
+    { id: "production", name: "Produção", enabled: true },
+    { id: "staging", name: "Homologação", enabled: true },
   ];
 
   var DEFAULT_CONFIG = {
@@ -24,15 +24,15 @@
     profiles: DEFAULT_PROFILES,
     profileStyles: {
       work: { color: "#d40000", bannerText: "Ambiente de Trabalho" },
-      production: { color: "#f97316", bannerText: "Ambiente de Producao" },
-      staging: { color: "#2563eb", bannerText: "Ambiente de Homologacao" },
+      production: { color: "#f97316", bannerText: "Ambiente de Produção" },
+      staging: { color: "#2563eb", bannerText: "Ambiente de Homologação" },
     },
     style: {
       width: 4,
       lineStyle: "solid",
     },
     bannerEnabled: true,
-    bannerText: "Ambiente sensivel",
+    bannerText: "Ambiente sensível",
     confirmDelete: true,
   };
 

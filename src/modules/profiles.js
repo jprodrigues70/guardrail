@@ -30,7 +30,7 @@
   function getProfileStyle(config, profileId, fallbackBannerText) {
     var fallback = {
       color: "#d40000",
-      bannerText: fallbackBannerText || "Ambiente sensivel",
+      bannerText: fallbackBannerText || "Ambiente sensível",
     };
 
     var style = config.profileStyles[profileId];

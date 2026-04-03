@@ -296,7 +296,7 @@
     var text = schema.sanitizeText(value);
 
     if (!text) {
-      showFeedback("Informe um valor de regra valido.", true);
+      showFeedback("Informe um valor de regra válido.", true);
       return;
     }
 
@@ -304,7 +304,7 @@
       try {
         new RegExp(text);
       } catch (error) {
-        showFeedback("Regex invalido.", true);
+        showFeedback("Regex inválido.", true);
         return;
       }
     }
@@ -352,7 +352,7 @@
     });
 
     saveConfig(function () {
-      showFeedback("Configuracao da borda atualizada.", false);
+      showFeedback("Configuração da borda atualizada.", false);
     });
   }
 
@@ -374,7 +374,7 @@
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         var tab = tabs && tabs[0];
         if (!tab || !tab.url) {
-          showFeedback("Nao foi possivel ler a URL da aba atual.", true);
+          showFeedback("Não foi possível ler a URL da aba atual.", true);
           return;
         }
 
@@ -384,7 +384,7 @@
           valueInput.focus();
           showFeedback("URL atual copiada para o campo.", false);
         } catch (error) {
-          showFeedback("URL da aba atual invalida para uso.", true);
+          showFeedback("URL da aba atual inválida para uso.", true);
         }
       });
     });
@@ -402,7 +402,7 @@
     confirmDeleteInput.addEventListener("change", function () {
       currentConfig.confirmDelete = confirmDeleteInput.checked;
       saveConfig(function () {
-        showFeedback("Protecao de remocao atualizada.", false);
+        showFeedback("Proteção de remoção atualizada.", false);
       });
     });
 
@@ -436,7 +436,7 @@
         schema.normalizeConfig(currentConfig),
         "pmfm-config.json",
       );
-      showFeedback("Configuracao exportada.", false);
+      showFeedback("Configuração exportada.", false);
     });
 
     importButton.addEventListener("click", function () {
@@ -456,11 +456,11 @@
 
           saveConfig(function () {
             render();
-            showFeedback("Configuracao importada.", false);
+            showFeedback("Configuração importada.", false);
           });
         },
         function () {
-          showFeedback("Arquivo JSON invalido.", true);
+          showFeedback("Arquivo JSON inválido.", true);
         },
       );
 

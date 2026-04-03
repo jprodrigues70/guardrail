@@ -29,6 +29,34 @@ A GuardRail monitora a URL da página atual com base em regras configuradas e ap
 1. Quando a URL da aba ativa combina com uma regra ativa, a extensão sobrepõe uma borda de alerta e pode mostrar um banner no topo com o texto do ambiente.
 1. O alerta visual usa as configurações do perfil correspondente.
 
+### Precedência entre regras
+
+A GuardRail usa uma política explícita para evitar comportamento arbitrário quando mais de uma regra combina com a mesma URL.
+
+Ordem de decisão:
+
+1. Regra mais específica vence (por tipo de comparação)
+1. Em empate de especificidade, vence a regra que apareceu primeiro na lista
+
+Prioridade por tipo (da mais forte para a mais fraca):
+
+- `domain` (domínio exato)
+- `startsWith` (começa com)
+- `contains` (contém)
+- `regex`
+
+Observação: dentro do mesmo tipo, valores mais longos têm prioridade sobre valores mais curtos.
+
+### Transparência do match
+
+Quando uma regra é aplicada, o banner mostra:
+
+- Regra aplicada (tipo + valor)
+- Perfil associado
+- URL detectada
+
+Isso melhora a confiança operacional e facilita depuração de regras.
+
 ## Estrutura do popup
 
 - Aba `Regras`:

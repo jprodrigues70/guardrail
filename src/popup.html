@@ -13,21 +13,23 @@
         <header class="popup__header">
             <img src="assets/guardrail-logo.svg" alt="GuardRail" class="popup__logo">
             <h1>GuardRail</h1>
-            <p>Regras de URL com alerta visual configuravel.</p>
+            <p>Regras de URL com alerta visual configurável.</p>
         </header>
 
         <p id="feedback" class="feedback" aria-live="polite" hidden></p>
 
-        <div class="tabs" role="tablist" aria-label="Navegacao do popup">
+        <div class="tabs" role="tablist" aria-label="Navegação do popup">
             <button type="button" id="tab-rules" class="tab tab--active" data-tab="rules" role="tab"
                 aria-selected="true">Regras</button>
             <button type="button" id="tab-settings" class="tab" data-tab="settings" role="tab"
-                aria-selected="false">Configuracoes</button>
+                aria-selected="false">Configurações</button>
         </div>
 
         <section id="panel-rules" class="tab-panel tab-panel--active" data-panel="rules" role="tabpanel">
             <section class="card card--rule-form">
                 <h2>Adicionar regra</h2>
+                <p class="helper-text">Precedência automática: regra mais específica vence (com desempate pela ordem da
+                    lista).</p>
                 <form id="rule-form" class="rule-form">
                     <div class="field-group">
                         <label for="rule-value">Valor da regra</label>
@@ -41,12 +43,12 @@
 
                     <div class="row two-columns">
                         <div class="field-group">
-                            <label for="rule-type">Tipo de comparacao</label>
+                            <label for="rule-type">Tipo de comparação</label>
                             <select id="rule-type">
-                                <option value="startsWith">Comeca com</option>
-                                <option value="contains">Contem</option>
+                                <option value="startsWith">Começa com</option>
+                                <option value="contains">Contém</option>
                                 <option value="regex">Regex</option>
-                                <option value="domain">Dominio exato</option>
+                                <option value="domain">Domínio exato</option>
                             </select>
                         </div>
                         <div class="field-group">
@@ -68,7 +70,7 @@
                 </div>
                 <ul id="rule-list" class="rule-list"></ul>
                 <p id="empty-state" class="empty-state">Nenhuma regra cadastrada.</p>
-                <button type="button" id="undo-remove" class="btn" hidden>Desfazer ultima remocao</button>
+                <button type="button" id="undo-remove" class="btn" hidden>Desfazer última remoção</button>
             </section>
         </section>
 
@@ -77,7 +79,7 @@
                 <div class="section-header">
                     <h2>Perfis</h2>
                 </div>
-                <p class="helper-text">Cada ambiente possui cor e texto proprios para o banner.</p>
+                <p class="helper-text">Cada ambiente possui cor e texto próprios para o banner.</p>
                 <ul id="profile-list" class="profile-list"></ul>
             </section>
 
@@ -92,7 +94,7 @@
                     <div class="field-group">
                         <label for="border-style">Estilo</label>
                         <select id="border-style">
-                            <option value="solid">Solido</option>
+                            <option value="solid">Sólido</option>
                             <option value="dashed">Tracejado</option>
                         </select>
                     </div>

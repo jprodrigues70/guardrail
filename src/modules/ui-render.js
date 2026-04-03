@@ -176,9 +176,12 @@
      *
      * @param {string} text Texto exibido no banner.
      * @param {string} color Cor de fundo aplicada ao banner.
+     * @param {object} details Informações de diagnóstico sobre a regra aplicada.
      */
-    function ensureBanner(text, color) {
+    function ensureBanner(text, color, details) {
       var banner = document.getElementById(bannerId);
+      var title = null;
+      var detailsLine = null;
       if (!banner) {
         banner = document.createElement("div");
         banner.id = bannerId;
@@ -194,6 +197,22 @@
         banner.style.color = "#ffffff";
         banner.style.boxSizing = "border-box";
 
+        title = document.createElement("div");
+        title.className = "pmfm-banner-title";
+        banner.appendChild(title);
+
+        detailsLine = document.createElement("small");
+        detailsLine.className = "pmfm-banner-details";
+        detailsLine.style.display = "block";
+        detailsLine.style.marginTop = "4px";
+        detailsLine.style.fontWeight = "500";
+        detailsLine.style.fontSize = "11px";
+        detailsLine.style.opacity = "0.95";
+        detailsLine.style.whiteSpace = "nowrap";
+        detailsLine.style.overflow = "hidden";
+        detailsLine.style.textOverflow = "ellipsis";
+        banner.appendChild(detailsLine);
+
         if (document.body) {
           document.body.insertBefore(banner, document.body.firstChild);
         } else {
@@ -201,8 +220,28 @@
         }
       }
 
+      title = title || banner.querySelector(".pmfm-banner-title");
+      detailsLine = detailsLine || banner.querySelector(".pmfm-banner-details");
+
       banner.style.background = color;
-      banner.textContent = text;
+      if (title) {
+        title.textContent = text;
+      } else {
+        banner.textContent = text;
+      }
+
+      if (detailsLine && details) {
+        var detailText = [
+          details.ruleText,
+          details.profileText,
+          details.urlText,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+        detailsLine.textContent = detailText;
+        detailsLine.title = detailText;
+      }
+
       applyBannerCompensation(banner.offsetHeight || 0);
     }
 

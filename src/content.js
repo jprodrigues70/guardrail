@@ -52,11 +52,20 @@
    * @param {object} config Configuração normalizada carregada do storage.
    */
   function applyConfig(config) {
-    var matchedRule = ruleMatcher.getMatchedRule(config, window.location.href);
-    if (!matchedRule) {
+    var matchDetails = ruleMatcher.getMatchDetails(
+      config,
+      window.location.href,
+    );
+    if (!matchDetails) {
       pageRenderer.clear();
       return;
     }
+
+    var matchedRule = matchDetails.rule;
+    var profileName = profilesModule.getProfileName(
+      config,
+      matchedRule.profileId,
+    );
 
     var profileStyle = profilesModule.getProfileStyle(
       config,
@@ -70,6 +79,16 @@
       pageRenderer.ensureBanner(
         profileStyle.bannerText || config.bannerText,
         profileStyle.color,
+        {
+          ruleText:
+            "Regra aplicada: " +
+            matchDetails.reason.matchType +
+            ' "' +
+            matchDetails.reason.ruleValue +
+            '"',
+          profileText: "Perfil: " + profileName,
+          urlText: "URL detectada: " + matchDetails.reason.detectedUrl,
+        },
       );
     } else {
       pageRenderer.removeBanner();
