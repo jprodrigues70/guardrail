@@ -1,82 +1,82 @@
-# Politica de Privacidade - GuardRail
+# Política de Privacidade - GuardRail
 
-Ultima atualizacao: 2026-04-02
+Última atualização: 2026-04-02
 
-Esta Politica de Privacidade descreve como a extensao GuardRail trata dados de usuarios.
+Esta Política de Privacidade descreve como a extensão GuardRail trata dados de usuários.
 
 ## 1. Resumo
 
-- A GuardRail nao coleta dados pessoais para servidores externos.
-- A GuardRail nao vende, compartilha ou transfere dados para terceiros.
-- Todas as configuracoes ficam no armazenamento do proprio navegador (`chrome.storage.sync`), vinculado a conta do usuario no navegador, quando aplicavel.
+- A GuardRail não coleta dados pessoais para servidores externos.
+- A GuardRail não vende, compartilha ou transfere dados para terceiros.
+- Todas as configurações ficam no armazenamento do próprio navegador (`chrome.storage.sync`), vinculado à conta do usuário no navegador, quando aplicável.
 
-## 2. Quais dados sao tratados
+## 2. Quais dados são tratados
 
-A extensao pode armazenar somente configuracoes funcionais, como:
+A extensão pode armazenar somente configurações funcionais, como:
 
-- Regras de URL configuradas pelo usuario
-- Perfis de ambiente (nomes, ativacao/desativacao)
-- Preferencias visuais (cor, espessura, estilo de borda)
+- Regras de URL configuradas pelo usuário
+- Perfis de ambiente (nomes, ativação/desativação)
+- Preferências visuais (cor, espessura, estilo de borda)
 - Texto de banner por ambiente
-- Preferencias de interface (por exemplo, confirmacao de remocao)
+- Preferências de interface (por exemplo, confirmação de remoção)
 
-Esses dados sao definidos pelo proprio usuario dentro da extensao.
+Esses dados são definidos pelo próprio usuário dentro da extensão.
 
-## 3. O que NAO coletamos
+## 3. O que NÃO coletamos
 
-A GuardRail nao coleta:
+A GuardRail não coleta:
 
 - Nome, email, telefone ou documentos
-- Conteudo de formularios digitados em sites
-- Historico de navegacao para analytics
+- Conteúdo de formulários digitados em sites
+- Histórico de navegação para analytics
 - Cookies para rastreamento
-- Geolocalizacao
-- Dados biometricos
+- Geolocalização
+- Dados biométricos
 
-## 4. Permissoes usadas
+## 4. Permissões usadas
 
-A extensao utiliza as seguintes permissoes:
+A extensão utiliza as seguintes permissões:
 
-- `storage`: salvar e recuperar configuracoes da extensao.
-- `tabs`: ler a URL da aba ativa quando o usuario usa a acao "Usar URL atual".
+- `storage`: salvar e recuperar configurações da extensão.
+- `tabs`: ler a URL da aba ativa quando o usuário usa a ação "Usar URL atual".
 
-A permissao `tabs` e usada apenas para essa funcionalidade local e nao envia dados para fora do navegador.
+A permissão `tabs` é usada apenas para essa funcionalidade local e não envia dados para fora do navegador.
 
 ## 5. Onde os dados ficam
 
-Os dados sao armazenados em `chrome.storage.sync`.
+Os dados são armazenados em `chrome.storage.sync`.
 
-- Em navegadores compativeis, isso pode sincronizar dados entre dispositivos da mesma conta do usuario.
-- A sincronizacao e gerenciada pelo proprio navegador (Chrome/Edge), nao por servidores da GuardRail.
+- Em navegadores compatíveis, isso pode sincronizar dados entre dispositivos da mesma conta do usuário.
+- A sincronização é gerenciada pelo próprio navegador (Chrome/Edge), não por servidores da GuardRail.
 
 ## 6. Compartilhamento de dados
 
-A GuardRail nao compartilha dados com terceiros.
+A GuardRail não compartilha dados com terceiros.
 
-## 7. Seguranca
+## 7. Segurança
 
-A extensao foi projetada para operar localmente. Mesmo assim, nenhum software pode garantir risco zero. Recomenda-se manter navegador e extensoes sempre atualizados.
+A extensão foi projetada para operar localmente. Mesmo assim, nenhum software pode garantir risco zero. Recomenda-se manter navegador e extensões sempre atualizados.
 
-## 8. Retencao e exclusao
+## 8. Retenção e exclusão
 
-Os dados permanecem armazenados ate que:
+Os dados permanecem armazenados até que:
 
-- o usuario os altere/remova no popup da extensao,
-- o usuario limpe os dados do navegador,
-- ou a extensao seja desinstalada.
+- o usuário os altere/remova no popup da extensão,
+- o usuário limpe os dados do navegador,
+- ou a extensão seja desinstalada.
 
 ## 9. Publico-alvo
 
-A GuardRail nao e destinada especificamente a criancas.
+A GuardRail não é destinada especificamente a crianças.
 
-## 10. Alteracoes nesta politica
+## 10. Alterações nesta política
 
-Esta politica pode ser atualizada para refletir melhorias da extensao ou exigencias legais. A data de "Ultima atualizacao" sera revisada quando houver mudancas.
+Esta política pode ser atualizada para refletir melhorias da extensão ou exigências legais. A data de "Última atualização" será revisada quando houver mudanças.
 
 ## 11. Contato
 
-Responsavel: JP Rodrigues
+Responsável: JP Rodrigues
 Projeto: GuardRail
-Licenca: MIT
+Licença: MIT
 
-Para duvidas sobre privacidade, abra uma issue no repositorio do projeto ou entre em contato com o mantenedor pelos canais oficiais do repositorio.
+Para dúvidas sobre privacidade, abra uma issue no repositório do projeto ou entre em contato com o mantenedor pelos canais oficiais do repositório.
