@@ -3,6 +3,16 @@
 
   var root = (globalThis.GuardRailModules = globalThis.GuardRailModules || {});
 
+  /**
+   * Avalia se uma regra específica corresponde à URL atual.
+   *
+   * Suporta os tipos contains, regex, domain e startsWith.
+   *
+   * @param {object} rule Regra individual.
+   * @param {string} currentUrl URL completa da página.
+   * @param {string} currentHostname Hostname já normalizado para minúsculas.
+   * @returns {boolean} Verdadeiro quando a regra corresponde.
+   */
   function isRuleMatch(rule, currentUrl, currentHostname) {
     if (rule.type === "contains") {
       return currentUrl.indexOf(rule.value) !== -1;
@@ -23,6 +33,15 @@
     return currentUrl.startsWith(rule.value);
   }
 
+  /**
+   * Retorna a primeira regra aplicável para a URL informada.
+   *
+   * Apenas regras de perfis habilitados participam da busca.
+   *
+   * @param {object} config Configuração completa da extensão.
+   * @param {string} href URL a ser avaliada.
+   * @returns {object|null} Regra correspondente ou nulo.
+   */
   function getMatchedRule(config, href) {
     var currentUrl = href || window.location.href;
     var currentHostname = new URL(currentUrl).hostname.toLowerCase();

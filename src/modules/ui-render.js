@@ -3,10 +3,23 @@
 
   var root = (globalThis.GuardRailModules = globalThis.GuardRailModules || {});
 
+  /**
+   * Cria um controlador de mensagens de feedback para o popup.
+   *
+   * @param {HTMLElement} feedbackElement Elemento onde a mensagem será exibida.
+   * @param {number} timeoutMs Tempo, em milissegundos, para ocultar automaticamente.
+   * @returns {{show: Function}} API para exibição de feedback.
+   */
   function createFeedbackController(feedbackElement, timeoutMs) {
     var timer = null;
     var hideAfter = Number(timeoutMs) || 2600;
 
+    /**
+     * Exibe uma mensagem e agenda ocultação automática.
+     *
+     * @param {string} message Texto apresentado ao usuário.
+     * @param {boolean} isError Define se a aparência deve ser de erro.
+     */
     function show(message, isError) {
       feedbackElement.textContent = message;
       feedbackElement.hidden = false;
@@ -27,7 +40,19 @@
     };
   }
 
+  /**
+   * Cria um controlador de navegação por abas no popup.
+   *
+   * @param {NodeList|Array<HTMLElement>} tabButtons Botões de troca de aba.
+   * @param {NodeList|Array<HTMLElement>} tabPanels Painéis de conteúdo.
+   * @returns {{switchTab: Function, wire: Function}} API de controle das abas.
+   */
   function createTabController(tabButtons, tabPanels) {
+    /**
+     * Ativa a aba solicitada e desativa as demais.
+     *
+     * @param {string} tabName Nome lógico da aba alvo.
+     */
     function switchTab(tabName) {
       tabButtons.forEach(function (button) {
         var active = button.getAttribute("data-tab") === tabName;
@@ -42,6 +67,9 @@
       });
     }
 
+    /**
+     * Liga os eventos de clique dos botões de aba.
+     */
     function wire() {
       tabButtons.forEach(function (button) {
         button.addEventListener("click", function () {
@@ -56,12 +84,24 @@
     };
   }
 
+  /**
+   * Cria um renderizador para alertas visuais na página (borda e banner).
+   *
+   * @param {object} options Identificadores e atributos usados no DOM.
+   * @returns {{ensureBorder: Function, removeBorder: Function, ensureBanner: Function, removeBanner: Function, clear: Function}} API de renderização.
+   */
   function createPageAlertRenderer(options) {
     var borderId = options.borderId;
     var bannerId = options.bannerId;
     var bodyBasePaddingBottomAttr = options.bodyBasePaddingBottomAttr;
     var bodyInlinePaddingBottomAttr = options.bodyInlinePaddingBottomAttr;
 
+    /**
+     * Garante a existência da borda de alerta e atualiza seu estilo.
+     *
+     * @param {{width:number,lineStyle:string}} style Estilo da borda.
+     * @param {string} color Cor da borda.
+     */
     function ensureBorder(style, color) {
       var border = document.getElementById(borderId);
       if (!border) {
@@ -81,11 +121,19 @@
         String(style.width) + "px " + style.lineStyle + " " + color;
     }
 
+    /**
+     * Remove a borda de alerta, se existir.
+     */
     function removeBorder() {
       var existing = document.getElementById(borderId);
       if (existing) existing.remove();
     }
 
+    /**
+     * Aplica compensação inferior no body para evitar corte de conteúdo.
+     *
+     * @param {number} bannerHeight Altura atual do banner renderizado.
+     */
     function applyBannerCompensation(bannerHeight) {
       if (!document.body) return;
 
@@ -109,6 +157,9 @@
         String(baseBottomPadding + bannerHeight) + "px";
     }
 
+    /**
+     * Restaura o padding inferior original do body.
+     */
     function clearBannerCompensation() {
       if (!document.body) return;
 
@@ -120,6 +171,12 @@
       body.removeAttribute(bodyInlinePaddingBottomAttr);
     }
 
+    /**
+     * Garante a existência do banner de alerta e atualiza seu conteúdo visual.
+     *
+     * @param {string} text Texto exibido no banner.
+     * @param {string} color Cor de fundo aplicada ao banner.
+     */
     function ensureBanner(text, color) {
       var banner = document.getElementById(bannerId);
       if (!banner) {
@@ -149,12 +206,18 @@
       applyBannerCompensation(banner.offsetHeight || 0);
     }
 
+    /**
+     * Remove o banner e limpa qualquer compensação de layout associada.
+     */
     function removeBanner() {
       var banner = document.getElementById(bannerId);
       if (banner) banner.remove();
       clearBannerCompensation();
     }
 
+    /**
+     * Limpa todos os elementos visuais de alerta da página.
+     */
     function clear() {
       removeBorder();
       removeBanner();

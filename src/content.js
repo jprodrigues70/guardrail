@@ -42,6 +42,15 @@
     bodyInlinePaddingBottomAttr: BODY_INLINE_PADDING_BOTTOM_ATTR,
   });
 
+  /**
+   * Aplica a configuração da extensão na página atual.
+   *
+   * A função identifica a primeira regra correspondente à URL, resolve o
+   * estilo do perfil e então desenha ou remove borda e banner conforme
+   * preferências ativas.
+   *
+   * @param {object} config Configuração normalizada carregada do storage.
+   */
   function applyConfig(config) {
     var matchedRule = ruleMatcher.getMatchedRule(config, window.location.href);
     if (!matchedRule) {
@@ -67,12 +76,24 @@
     }
   }
 
+  /**
+   * Recarrega a configuração do armazenamento e reaplica na página.
+   *
+   * Centraliza leitura e aplicação para ser reutilizada em mudanças de URL
+   * e alterações de configuração vindas do popup.
+   */
   function updateFromStorage() {
     storageApi.loadConfig(function (config) {
       applyConfig(config);
     });
   }
 
+  /**
+   * Verifica se a URL mudou e dispara atualização somente quando necessário.
+   *
+   * Evita processamento redundante em SPAs onde diversos eventos podem ser
+   * emitidos sem alteração real de rota.
+   */
   function onPossibleUrlChange() {
     var currentHref = window.location.href;
     if (currentHref === lastKnownHref) return;
@@ -80,6 +101,11 @@
     updateFromStorage();
   }
 
+  /**
+   * Intercepta métodos da History API para detectar navegação interna em SPAs.
+   *
+   * @param {"pushState"|"replaceState"} methodName Nome do método a ser encapsulado.
+   */
   function patchHistoryMethod(methodName) {
     var original = history[methodName];
     if (typeof original !== "function") return;
@@ -91,6 +117,12 @@
     };
   }
 
+  /**
+   * Inicializa os observadores de mudança de URL para páginas dinâmicas.
+   *
+   * Combina History API, eventos nativos e polling como fallback para cobrir
+   * cenários em que bibliotecas de roteamento não disparam todos os eventos.
+   */
   function setupSpaUrlObserver() {
     patchHistoryMethod("pushState");
     patchHistoryMethod("replaceState");

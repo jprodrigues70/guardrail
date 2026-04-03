@@ -55,14 +55,34 @@
   var currentConfig = null;
   var lastRemovedRule = null;
 
+  /**
+   * Exibe uma mensagem de retorno no topo do popup.
+   *
+   * Esta função centraliza o uso do controlador de feedback para manter
+   * consistência visual entre mensagens de sucesso e erro.
+   *
+   * @param {string} message Mensagem a ser apresentada para a pessoa usuária.
+   * @param {boolean} isError Define se a mensagem deve ser tratada como erro.
+   */
   function showFeedback(message, isError) {
     feedbackController.show(message, isError);
   }
 
+  /**
+   * Persiste a configuração atual no armazenamento sincronizado da extensão.
+   *
+   * @param {Function} callback Função opcional executada após salvar.
+   */
   function saveConfig(callback) {
     storageApi.saveConfig(currentConfig, callback);
   }
 
+  /**
+   * Sincroniza os campos do formulário com o estado mais recente da configuração.
+   *
+   * Este método atualiza a lista de perfis no seletor de regra e também aplica
+   * os valores de estilo e preferências (borda, banner e confirmação de remoção).
+   */
   function syncInputsFromConfig() {
     profileInput.innerHTML = "";
     currentConfig.profiles.forEach(function (profile) {
@@ -82,6 +102,12 @@
     confirmDeleteInput.checked = currentConfig.confirmDelete;
   }
 
+  /**
+   * Renderiza a lista de perfis com seus controles de edição.
+   *
+   * Cada item permite alterar texto do banner, cor e status habilitado,
+   * salvando automaticamente após cada modificação.
+   */
   function renderProfiles() {
     profileList.innerHTML = "";
 
@@ -179,6 +205,12 @@
     });
   }
 
+  /**
+   * Renderiza a lista de regras cadastradas.
+   *
+   * Também gerencia remoção com confirmação opcional, estado de lista vazia
+   * e disponibilidade do botão de desfazer última exclusão.
+   */
   function renderRules() {
     ruleList.innerHTML = "";
 
@@ -238,12 +270,28 @@
     ruleList.hidden = isEmpty;
   }
 
+  /**
+   * Atualiza toda a interface do popup com base no estado atual.
+   *
+   * Mantém uma ordem estável de renderização para evitar inconsistências
+   * entre formulário, perfis e lista de regras.
+   */
   function render() {
     syncInputsFromConfig();
     renderProfiles();
     renderRules();
   }
 
+  /**
+   * Cria e salva uma nova regra após validações de formato e duplicidade.
+   *
+   * Regras inválidas ou repetidas não são adicionadas, e o usuário recebe
+   * feedback imediato explicando o motivo.
+   *
+   * @param {string} value Valor bruto informado no campo de regra.
+   * @param {string} type Tipo de correspondência selecionado.
+   * @param {string} profileId Identificador do perfil associado à regra.
+   */
   function addRule(value, type, profileId) {
     var text = schema.sanitizeText(value);
 
@@ -291,6 +339,12 @@
     });
   }
 
+  /**
+   * Normaliza e salva as preferências visuais da borda de alerta.
+   *
+   * É acionado ao alterar espessura ou estilo, garantindo que apenas valores
+   * válidos sejam persistidos.
+   */
   function saveBorderStyle() {
     currentConfig.style = schema.normalizeStyle({
       width: borderWidth.value,
@@ -302,6 +356,12 @@
     });
   }
 
+  /**
+   * Registra todos os eventos da interface do popup.
+   *
+   * Este método conecta ações de formulário, botões utilitários,
+   * preferências gerais e fluxo de importação/exportação de configuração.
+   */
   function wireEvents() {
     tabController.wire();
 

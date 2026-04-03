@@ -3,6 +3,14 @@
 
   var root = (globalThis.GuardRailModules = globalThis.GuardRailModules || {});
 
+  /**
+   * Exporta a configuração para um arquivo JSON.
+   *
+   * Cria um Blob temporário, dispara o download e libera recursos em seguida.
+   *
+   * @param {object} config Configuração que será serializada.
+   * @param {string} filename Nome sugerido para o arquivo baixado.
+   */
   function exportConfigAsJson(config, filename) {
     var blob = new Blob([JSON.stringify(config, null, 2)], {
       type: "application/json",
@@ -18,6 +26,13 @@
     URL.revokeObjectURL(url);
   }
 
+  /**
+   * Importa configuração a partir de um arquivo JSON selecionado.
+   *
+   * @param {File} file Arquivo enviado pela pessoa usuária.
+   * @param {Function} onSuccess Callback executado com o JSON parseado.
+   * @param {Function} onError Callback executado quando o conteúdo é inválido.
+   */
   function importConfigFromFile(file, onSuccess, onError) {
     if (!file) return;
 
