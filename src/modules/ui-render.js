@@ -265,10 +265,11 @@
         ribbon.style.width = "0";
         ribbon.style.height = "0";
         ribbon.style.padding = "0";
-        ribbon.style.borderTop = "60px solid #d40000";
+        ribbon.style.borderTop = "50px solid #d40000";
         ribbon.style.borderBottom = "0px solid transparent";
         ribbon.style.borderLeft = "0 solid transparent";
-        ribbon.style.borderRight = "60px solid transparent";
+        ribbon.style.borderRight = "50px solid transparent";
+        ribbon.style.borderBottomRightRadius = "200px";
         ribbon.style.background = "transparent";
         ribbon.style.cursor = "pointer";
         ribbon.style.zIndex = "2147483647";
