@@ -177,6 +177,7 @@
     return value
       .map(function (rule) {
         var text = sanitizeText(rule && rule.value);
+        var tag = sanitizeText(rule && rule.tag);
         var type = sanitizeText(rule && rule.type);
         var profileId = sanitizeText(rule && rule.profileId);
 
@@ -192,6 +193,7 @@
           id: sanitizeText(rule && rule.id) || makeId(),
           type: type,
           value: text,
+          tag: tag,
           profileId: profileId,
         };
       })

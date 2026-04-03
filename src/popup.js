@@ -22,8 +22,10 @@
   var tabPanels = document.querySelectorAll("[data-panel]");
   var form = document.getElementById("rule-form");
   var valueInput = document.getElementById("rule-value");
+  var tagInput = document.getElementById("rule-tag");
   var typeInput = document.getElementById("rule-type");
   var profileInput = document.getElementById("rule-profile");
+  var groupByInput = document.getElementById("rules-group-by");
   var addCurrentUrlBtn = document.getElementById("add-current-url");
 
   var profileList = document.getElementById("profile-list");
@@ -56,6 +58,7 @@
 
   var currentConfig = null;
   var lastRemovedRule = null;
+  var currentGroupBy = "none";
   var defaultProfileIds = schema.DEFAULT_PROFILES.reduce(function (acc, item) {
     acc[item.id] = true;
     return acc;
@@ -313,6 +316,7 @@
         id: rule.id,
         type: rule.type,
         value: rule.value,
+        tag: rule.tag,
         profileId: fallbackProfileId,
       };
     });
@@ -341,60 +345,130 @@
   function renderRules() {
     ruleList.innerHTML = "";
 
+    var groupedRules = Object.create(null);
+    var groupOrder = [];
+
     currentConfig.rules.forEach(function (rule) {
-      var item = document.createElement("li");
-      item.className = "rule-item";
+      var groupName = getRuleGroupName(rule, currentGroupBy);
+      if (!groupedRules[groupName]) {
+        groupedRules[groupName] = [];
+        groupOrder.push(groupName);
+      }
+      groupedRules[groupName].push(rule);
+    });
 
-      var text = document.createElement("span");
-      text.className = "rule-item__text";
-      text.textContent =
-        "[" +
-        schema.RULE_TYPES[rule.type] +
-        "] " +
-        rule.value +
-        " (" +
-        profilesModule.getProfileName(currentConfig, rule.profileId) +
-        ")";
+    groupOrder.forEach(function (groupName) {
+      if (currentGroupBy !== "none") {
+        var groupTitle = document.createElement("li");
+        groupTitle.className = "rule-group-title";
+        groupTitle.textContent = groupName;
+        ruleList.appendChild(groupTitle);
+      }
 
-      var removeButton = document.createElement("button");
-      removeButton.className = "rule-item__remove";
-      removeButton.type = "button";
-      removeButton.textContent = "Remover";
-      removeButton.addEventListener("click", function () {
-        if (
-          currentConfig.confirmDelete &&
-          !window.confirm("Remover essa regra?")
-        ) {
-          return;
+      groupedRules[groupName].forEach(function (rule) {
+        var item = document.createElement("li");
+        item.className = "rule-item";
+
+        var text = document.createElement("span");
+        text.className = "rule-item__text";
+        text.textContent =
+          "[" +
+          schema.RULE_TYPES[rule.type] +
+          "] " +
+          rule.value +
+          " (" +
+          profilesModule.getProfileName(currentConfig, rule.profileId) +
+          ")";
+
+        if (rule.tag) {
+          var tagBadge = document.createElement("span");
+          tagBadge.className = "rule-tag";
+          tagBadge.textContent = "#" + rule.tag;
+          text.appendChild(document.createTextNode(" "));
+          text.appendChild(tagBadge);
         }
 
-        var removed = null;
-        currentConfig.rules = currentConfig.rules.filter(function (candidate) {
-          if (candidate.id === rule.id) {
-            removed = candidate;
-            return false;
+        var removeButton = document.createElement("button");
+        removeButton.className = "rule-item__remove";
+        removeButton.type = "button";
+        removeButton.textContent = "Remover";
+        removeButton.addEventListener("click", function () {
+          if (
+            currentConfig.confirmDelete &&
+            !window.confirm("Remover essa regra?")
+          ) {
+            return;
           }
-          return true;
+
+          var removed = null;
+          currentConfig.rules = currentConfig.rules.filter(
+            function (candidate) {
+              if (candidate.id === rule.id) {
+                removed = candidate;
+                return false;
+              }
+              return true;
+            },
+          );
+
+          saveConfig(function () {
+            if (removed) {
+              lastRemovedRule = removed;
+              undoRemoveButton.hidden = false;
+            }
+            showFeedback("Regra removida.", false);
+            render();
+          });
         });
 
-        saveConfig(function () {
-          if (removed) {
-            lastRemovedRule = removed;
-            undoRemoveButton.hidden = false;
-          }
-          showFeedback("Regra removida.", false);
-          render();
-        });
+        item.appendChild(text);
+        item.appendChild(removeButton);
+        ruleList.appendChild(item);
       });
-
-      item.appendChild(text);
-      item.appendChild(removeButton);
-      ruleList.appendChild(item);
     });
 
     var isEmpty = currentConfig.rules.length === 0;
     emptyState.hidden = !isEmpty;
     ruleList.hidden = isEmpty;
+  }
+
+  function extractHostname(value) {
+    var text = schema.sanitizeText(value);
+    if (!text) return "";
+
+    var urlMatch = text.match(/https?:\/\/([^\/#?]+)/i);
+    if (urlMatch && urlMatch[1]) return urlMatch[1].toLowerCase();
+    if (/^[a-z0-9.-]+$/i.test(text)) return text.toLowerCase();
+    return "";
+  }
+
+  function toBaseDomain(hostname) {
+    var host = schema.sanitizeText(hostname).toLowerCase();
+    if (!host) return "";
+
+    var parts = host.split(".").filter(Boolean);
+    if (parts.length <= 2) return host;
+    return parts.slice(parts.length - 2).join(".");
+  }
+
+  function getRuleGroupName(rule, groupBy) {
+    if (groupBy === "profile") {
+      return (
+        "Perfil: " +
+        profilesModule.getProfileName(currentConfig, rule.profileId)
+      );
+    }
+
+    if (groupBy === "domain") {
+      var base = toBaseDomain(extractHostname(rule.value));
+      return "Domínio-base: " + (base || "(não identificado)");
+    }
+
+    if (groupBy === "tag") {
+      return "Tag: " + (rule.tag ? "#" + rule.tag : "(sem tag)");
+    }
+
+    return "Todas";
   }
 
   /**
@@ -418,9 +492,11 @@
    * @param {string} value Valor bruto informado no campo de regra.
    * @param {string} type Tipo de correspondência selecionado.
    * @param {string} profileId Identificador do perfil associado à regra.
+   * @param {string} tag Tag opcional para categorização da regra.
    */
-  function addRule(value, type, profileId) {
+  function addRule(value, type, profileId, tag) {
     var text = schema.sanitizeText(value);
+    var normalizedTag = schema.sanitizeText(tag);
 
     if (!text) {
       showFeedback("Informe um valor de regra válido.", true);
@@ -445,7 +521,7 @@
     });
 
     if (exists) {
-      showFeedback("Essa regra ja existe nesse perfil.", true);
+      showFeedback("Essa regra já existe nesse perfil.", true);
       return;
     }
 
@@ -453,6 +529,7 @@
       id: schema.makeId(),
       type: type,
       value: text,
+      tag: normalizedTag,
       profileId: profileId,
     });
 
@@ -461,6 +538,7 @@
       form.reset();
       typeInput.value = "startsWith";
       profileInput.value = profileId;
+      groupByInput.value = currentGroupBy;
       valueInput.focus();
       showFeedback("Regra adicionada.", false);
     });
@@ -494,7 +572,17 @@
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      addRule(valueInput.value, typeInput.value, profileInput.value);
+      addRule(
+        valueInput.value,
+        typeInput.value,
+        profileInput.value,
+        tagInput.value,
+      );
+    });
+
+    groupByInput.addEventListener("change", function () {
+      currentGroupBy = groupByInput.value || "none";
+      renderRules();
     });
 
     addCurrentUrlBtn.addEventListener("click", function () {

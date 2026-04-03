@@ -15,6 +15,8 @@ A GuardRail monitora a URL da página atual com base em regras configuradas e ap
   - `domain` (domínio exato)
 - Perfis de ambiente (ex.: Trabalho, Produção, Homologação)
 - Criação de contextos personalizados
+- Tags opcionais por regra
+- Agrupamento de regras por perfil, domínio-base ou tag
 - Cor de alerta por ambiente
 - Texto de banner por ambiente
 - Borda configurável (espessura e estilo)
@@ -62,6 +64,8 @@ Isso melhora a confiança operacional e facilita depuração de regras.
 
 - Aba `Regras`:
   - Adição de regras
+  - Campo de tag opcional por regra
+  - Agrupamento da lista por perfil, domínio-base, tag ou sem agrupamento
   - Botão `Usar URL atual` (preenche o input, não adiciona automaticamente)
   - Lista de regras ativas
 - Aba `Configurações`:

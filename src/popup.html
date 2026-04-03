@@ -57,6 +57,11 @@
                         </div>
                     </div>
 
+                    <div class="field-group">
+                        <label for="rule-tag">Tag (opcional)</label>
+                        <input id="rule-tag" type="text" placeholder="Ex: admin" maxlength="24">
+                    </div>
+
                     <div class="row actions">
                         <button type="submit" class="btn btn--primary">Adicionar regra</button>
                     </div>
@@ -67,6 +72,15 @@
                 <div class="section-header">
                     <h2>Regras ativas</h2>
                     <button type="button" id="clear-rules" class="btn btn--danger">Limpar tudo</button>
+                </div>
+                <div class="field-group">
+                    <label for="rules-group-by">Agrupar por</label>
+                    <select id="rules-group-by">
+                        <option value="none">Sem agrupamento</option>
+                        <option value="profile">Perfil</option>
+                        <option value="domain">Domínio-base</option>
+                        <option value="tag">Tag</option>
+                    </select>
                 </div>
                 <ul id="rule-list" class="rule-list"></ul>
                 <p id="empty-state" class="empty-state">Nenhuma regra cadastrada.</p>
