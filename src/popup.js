@@ -1,36 +1,22 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "pmfmConfig";
-  var LEGACY_PREFIX_KEY = "urlPrefixes";
+  var modules = globalThis.GuardRailModules || {};
+  var schema = modules.configSchema;
+  var storageModule = modules.storage;
+  var profilesModule = modules.profiles;
+  var importExport = modules.importExport;
+  var uiRender = modules.uiRender;
 
-  var RULE_TYPES = {
-    startsWith: "Comeca com",
-    contains: "Contem",
-    regex: "Regex",
-    domain: "Dominio exato",
-  };
-
-  var DEFAULT_CONFIG = {
-    rules: [],
-    profiles: [
-      { id: "work", name: "Trabalho", enabled: true },
-      { id: "production", name: "Producao", enabled: true },
-      { id: "staging", name: "Homologacao", enabled: true },
-    ],
-    profileStyles: {
-      work: { color: "#d40000", bannerText: "Ambiente de Trabalho" },
-      production: { color: "#f97316", bannerText: "Ambiente de Producao" },
-      staging: { color: "#2563eb", bannerText: "Ambiente de Homologacao" },
-    },
-    style: {
-      width: 4,
-      lineStyle: "solid",
-    },
-    bannerEnabled: true,
-    bannerText: "Ambiente sensivel",
-    confirmDelete: true,
-  };
+  if (
+    !schema ||
+    !storageModule ||
+    !profilesModule ||
+    !importExport ||
+    !uiRender
+  ) {
+    throw new Error("GuardRail modules were not loaded before popup.js");
+  }
 
   var tabButtons = document.querySelectorAll("[data-tab]");
   var tabPanels = document.querySelectorAll("[data-panel]");
@@ -56,226 +42,25 @@
   var emptyState = document.getElementById("empty-state");
   var feedback = document.getElementById("feedback");
 
+  var storageApi = storageModule.createStorageApi({
+    storageKey: schema.STORAGE_KEY,
+    legacyKey: schema.LEGACY_PREFIX_KEY,
+    normalizeConfig: schema.normalizeConfig,
+    buildConfigFromLegacy: schema.buildConfigFromLegacy,
+  });
+
+  var feedbackController = uiRender.createFeedbackController(feedback, 2600);
+  var tabController = uiRender.createTabController(tabButtons, tabPanels);
+
   var currentConfig = null;
   var lastRemovedRule = null;
-  var feedbackTimer = null;
-
-  function sanitizeText(value) {
-    return (value || "").trim();
-  }
-
-  function clone(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
-
-  function makeId() {
-    return "rule-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8);
-  }
-
-  function normalizeColor(value, fallback) {
-    var color = sanitizeText(value);
-    if (/^#[0-9a-fA-F]{6}$/.test(color)) return color;
-    return fallback;
-  }
-
-  function normalizeProfiles(value) {
-    var source = Array.isArray(value) ? value : DEFAULT_CONFIG.profiles;
-    var profiles = source
-      .map(function (profile) {
-        var id = sanitizeText(profile && profile.id);
-        var name = sanitizeText(profile && profile.name);
-        if (!id || !name) return null;
-        return { id: id, name: name, enabled: Boolean(profile.enabled) };
-      })
-      .filter(Boolean);
-
-    return profiles.length ? profiles : clone(DEFAULT_CONFIG.profiles);
-  }
-
-  function normalizeStyle(value) {
-    var source = value || {};
-    var width = Number(source.width);
-    if (!Number.isFinite(width)) width = DEFAULT_CONFIG.style.width;
-    width = Math.max(1, Math.min(16, Math.round(width)));
-
-    return {
-      width: width,
-      lineStyle: source.lineStyle === "dashed" ? "dashed" : "solid",
-    };
-  }
-
-  function normalizeProfileStyles(rawProfileStyles, profiles, legacyColor) {
-    var source =
-      rawProfileStyles && typeof rawProfileStyles === "object"
-        ? rawProfileStyles
-        : {};
-    var fallbackFromLegacy = normalizeColor(legacyColor, "#d40000");
-    var profileStyles = {};
-
-    profiles.forEach(function (profile) {
-      var defaultData = DEFAULT_CONFIG.profileStyles[profile.id] || {
-        color: fallbackFromLegacy,
-        bannerText: profile.name,
-      };
-
-      var entry = source[profile.id] || {};
-      profileStyles[profile.id] = {
-        color: normalizeColor(entry.color, defaultData.color),
-        bannerText: sanitizeText(entry.bannerText) || defaultData.bannerText,
-      };
-    });
-
-    return profileStyles;
-  }
-
-  function normalizeRules(value, profileIds) {
-    if (!Array.isArray(value)) return [];
-
-    var seen = Object.create(null);
-
-    return value
-      .map(function (rule) {
-        var text = sanitizeText(rule && rule.value);
-        var type = sanitizeText(rule && rule.type);
-        var profileId = sanitizeText(rule && rule.profileId);
-        if (!text) return null;
-        if (!RULE_TYPES[type]) type = "startsWith";
-        if (!profileIds[profileId]) profileId = DEFAULT_CONFIG.profiles[0].id;
-
-        var dedupe = type + "::" + profileId + "::" + text.toLowerCase();
-        if (seen[dedupe]) return null;
-        seen[dedupe] = true;
-
-        return {
-          id: sanitizeText(rule && rule.id) || makeId(),
-          type: type,
-          value: text,
-          profileId: profileId,
-        };
-      })
-      .filter(Boolean);
-  }
-
-  function normalizeConfig(rawConfig) {
-    var config = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
-    var profiles = normalizeProfiles(config.profiles);
-    var profileIds = Object.create(null);
-
-    profiles.forEach(function (profile) {
-      profileIds[profile.id] = true;
-    });
-
-    return {
-      rules: normalizeRules(config.rules, profileIds),
-      profiles: profiles,
-      profileStyles: normalizeProfileStyles(
-        config.profileStyles,
-        profiles,
-        config.style && config.style.color,
-      ),
-      style: normalizeStyle(config.style),
-      bannerEnabled:
-        typeof config.bannerEnabled === "boolean"
-          ? config.bannerEnabled
-          : DEFAULT_CONFIG.bannerEnabled,
-      bannerText: sanitizeText(config.bannerText) || DEFAULT_CONFIG.bannerText,
-      confirmDelete:
-        typeof config.confirmDelete === "boolean"
-          ? config.confirmDelete
-          : DEFAULT_CONFIG.confirmDelete,
-    };
-  }
-
-  function migrateLegacy(prefixes) {
-    var seen = Object.create(null);
-
-    return {
-      rules: (Array.isArray(prefixes) ? prefixes : [])
-        .map(function (prefix) {
-          return sanitizeText(prefix);
-        })
-        .filter(function (prefix) {
-          if (!prefix) return false;
-          var key = prefix.toLowerCase();
-          if (seen[key]) return false;
-          seen[key] = true;
-          return true;
-        })
-        .map(function (prefix) {
-          return {
-            id: makeId(),
-            type: "startsWith",
-            value: prefix,
-            profileId: DEFAULT_CONFIG.profiles[0].id,
-          };
-        }),
-      profiles: clone(DEFAULT_CONFIG.profiles),
-      profileStyles: clone(DEFAULT_CONFIG.profileStyles),
-      style: clone(DEFAULT_CONFIG.style),
-      bannerEnabled: DEFAULT_CONFIG.bannerEnabled,
-      bannerText: DEFAULT_CONFIG.bannerText,
-      confirmDelete: DEFAULT_CONFIG.confirmDelete,
-    };
-  }
 
   function showFeedback(message, isError) {
-    feedback.textContent = message;
-    feedback.hidden = false;
-    feedback.classList.add("feedback--visible");
-    feedback.classList.toggle("feedback--error", Boolean(isError));
-
-    if (feedbackTimer) window.clearTimeout(feedbackTimer);
-    feedbackTimer = window.setTimeout(function () {
-      feedback.classList.remove("feedback--visible");
-      feedback.classList.remove("feedback--error");
-      feedback.textContent = "";
-      feedback.hidden = true;
-    }, 2600);
+    feedbackController.show(message, isError);
   }
 
   function saveConfig(callback) {
-    chrome.storage.sync.set(
-      { pmfmConfig: normalizeConfig(currentConfig) },
-      callback,
-    );
-  }
-
-  function loadConfig(callback) {
-    chrome.storage.sync.get(
-      { pmfmConfig: null, urlPrefixes: [] },
-      function (result) {
-        if (result[STORAGE_KEY]) {
-          callback(normalizeConfig(result[STORAGE_KEY]));
-          return;
-        }
-
-        var migrated = migrateLegacy(result[LEGACY_PREFIX_KEY]);
-        chrome.storage.sync.set({ pmfmConfig: migrated }, function () {
-          callback(normalizeConfig(migrated));
-        });
-      },
-    );
-  }
-
-  function switchTab(tabName) {
-    tabButtons.forEach(function (button) {
-      var active = button.getAttribute("data-tab") === tabName;
-      button.classList.toggle("tab--active", active);
-      button.setAttribute("aria-selected", active ? "true" : "false");
-    });
-
-    tabPanels.forEach(function (panel) {
-      var active = panel.getAttribute("data-panel") === tabName;
-      panel.classList.toggle("tab-panel--active", active);
-      panel.hidden = !active;
-    });
-  }
-
-  function getProfileName(profileId) {
-    var profile = currentConfig.profiles.find(function (item) {
-      return item.id === profileId;
-    });
-    return profile ? profile.name : "Sem perfil";
+    storageApi.saveConfig(currentConfig, callback);
   }
 
   function syncInputsFromConfig() {
@@ -327,7 +112,7 @@
         }
 
         currentConfig.profileStyles[profile.id].bannerText =
-          sanitizeText(bannerInput.value) || profile.name;
+          schema.sanitizeText(bannerInput.value) || profile.name;
 
         saveConfig(function () {
           showFeedback("Texto do banner do ambiente atualizado.", false);
@@ -354,7 +139,8 @@
             bannerText: profile.name,
           };
         }
-        currentConfig.profileStyles[profile.id].color = normalizeColor(
+
+        currentConfig.profileStyles[profile.id].color = schema.normalizeColor(
           colorInput.value,
           "#d40000",
         );
@@ -404,11 +190,11 @@
       text.className = "rule-item__text";
       text.textContent =
         "[" +
-        RULE_TYPES[rule.type] +
+        schema.RULE_TYPES[rule.type] +
         "] " +
         rule.value +
         " (" +
-        getProfileName(rule.profileId) +
+        profilesModule.getProfileName(currentConfig, rule.profileId) +
         ")";
 
       var removeButton = document.createElement("button");
@@ -459,7 +245,7 @@
   }
 
   function addRule(value, type, profileId) {
-    var text = sanitizeText(value);
+    var text = schema.sanitizeText(value);
 
     if (!text) {
       showFeedback("Informe um valor de regra valido.", true);
@@ -489,7 +275,7 @@
     }
 
     currentConfig.rules = currentConfig.rules.concat({
-      id: makeId(),
+      id: schema.makeId(),
       type: type,
       value: text,
       profileId: profileId,
@@ -506,7 +292,7 @@
   }
 
   function saveBorderStyle() {
-    currentConfig.style = normalizeStyle({
+    currentConfig.style = schema.normalizeStyle({
       width: borderWidth.value,
       lineStyle: borderStyle.value,
     });
@@ -516,131 +302,116 @@
     });
   }
 
-  tabButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      switchTab(button.getAttribute("data-tab"));
+  function wireEvents() {
+    tabController.wire();
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      addRule(valueInput.value, typeInput.value, profileInput.value);
     });
-  });
 
-  form.addEventListener("submit", function (event) {
-    event.preventDefault();
-    addRule(valueInput.value, typeInput.value, profileInput.value);
-  });
+    addCurrentUrlBtn.addEventListener("click", function () {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        var tab = tabs && tabs[0];
+        if (!tab || !tab.url) {
+          showFeedback("Nao foi possivel ler a URL da aba atual.", true);
+          return;
+        }
 
-  addCurrentUrlBtn.addEventListener("click", function () {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      var tab = tabs && tabs[0];
-      if (!tab || !tab.url) {
-        showFeedback("Nao foi possivel ler a URL da aba atual.", true);
-        return;
-      }
-
-      try {
-        var parsed = new URL(tab.url);
-        valueInput.value = parsed.origin + parsed.pathname;
-        valueInput.focus();
-        showFeedback("URL atual copiada para o campo.", false);
-      } catch (error) {
-        showFeedback("URL da aba atual invalida para uso.", true);
-      }
+        try {
+          var parsed = new URL(tab.url);
+          valueInput.value = parsed.origin + parsed.pathname;
+          valueInput.focus();
+          showFeedback("URL atual copiada para o campo.", false);
+        } catch (error) {
+          showFeedback("URL da aba atual invalida para uso.", true);
+        }
+      });
     });
-  });
 
-  borderWidth.addEventListener("change", saveBorderStyle);
-  borderStyle.addEventListener("change", saveBorderStyle);
+    borderWidth.addEventListener("change", saveBorderStyle);
+    borderStyle.addEventListener("change", saveBorderStyle);
 
-  bannerEnabled.addEventListener("change", function () {
-    currentConfig.bannerEnabled = bannerEnabled.checked;
-    saveConfig(function () {
-      showFeedback("Mensagem fixa atualizada.", false);
+    bannerEnabled.addEventListener("change", function () {
+      currentConfig.bannerEnabled = bannerEnabled.checked;
+      saveConfig(function () {
+        showFeedback("Mensagem fixa atualizada.", false);
+      });
     });
-  });
 
-  confirmDeleteInput.addEventListener("change", function () {
-    currentConfig.confirmDelete = confirmDeleteInput.checked;
-    saveConfig(function () {
-      showFeedback("Protecao de remocao atualizada.", false);
+    confirmDeleteInput.addEventListener("change", function () {
+      currentConfig.confirmDelete = confirmDeleteInput.checked;
+      saveConfig(function () {
+        showFeedback("Protecao de remocao atualizada.", false);
+      });
     });
-  });
 
-  clearRulesButton.addEventListener("click", function () {
-    if (!window.confirm("Limpar todas as regras?")) return;
-    currentConfig.rules = [];
-    lastRemovedRule = null;
-    undoRemoveButton.hidden = true;
+    clearRulesButton.addEventListener("click", function () {
+      if (!window.confirm("Limpar todas as regras?")) return;
+      currentConfig.rules = [];
+      lastRemovedRule = null;
+      undoRemoveButton.hidden = true;
 
-    saveConfig(function () {
-      showFeedback("Todas as regras foram removidas.", false);
-      render();
+      saveConfig(function () {
+        showFeedback("Todas as regras foram removidas.", false);
+        render();
+      });
     });
-  });
 
-  undoRemoveButton.addEventListener("click", function () {
-    if (!lastRemovedRule) return;
+    undoRemoveButton.addEventListener("click", function () {
+      if (!lastRemovedRule) return;
 
-    currentConfig.rules = currentConfig.rules.concat(lastRemovedRule);
-    lastRemovedRule = null;
-    undoRemoveButton.hidden = true;
+      currentConfig.rules = currentConfig.rules.concat(lastRemovedRule);
+      lastRemovedRule = null;
+      undoRemoveButton.hidden = true;
 
-    saveConfig(function () {
-      showFeedback("Regra restaurada.", false);
-      render();
+      saveConfig(function () {
+        showFeedback("Regra restaurada.", false);
+        render();
+      });
     });
-  });
 
-  exportButton.addEventListener("click", function () {
-    var blob = new Blob(
-      [JSON.stringify(normalizeConfig(currentConfig), null, 2)],
-      {
-        type: "application/json",
-      },
-    );
+    exportButton.addEventListener("click", function () {
+      importExport.exportConfigAsJson(
+        schema.normalizeConfig(currentConfig),
+        "pmfm-config.json",
+      );
+      showFeedback("Configuracao exportada.", false);
+    });
 
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement("a");
-    link.href = url;
-    link.download = "pmfm-config.json";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    importButton.addEventListener("click", function () {
+      importFile.click();
+    });
 
-    showFeedback("Configuracao exportada.", false);
-  });
+    importFile.addEventListener("change", function () {
+      var file = importFile.files && importFile.files[0];
+      if (!file) return;
 
-  importButton.addEventListener("click", function () {
-    importFile.click();
-  });
+      importExport.importConfigFromFile(
+        file,
+        function (parsed) {
+          currentConfig = schema.normalizeConfig(parsed);
+          lastRemovedRule = null;
+          undoRemoveButton.hidden = true;
 
-  importFile.addEventListener("change", function () {
-    var file = importFile.files && importFile.files[0];
-    if (!file) return;
+          saveConfig(function () {
+            render();
+            showFeedback("Configuracao importada.", false);
+          });
+        },
+        function () {
+          showFeedback("Arquivo JSON invalido.", true);
+        },
+      );
 
-    var reader = new FileReader();
-    reader.onload = function () {
-      try {
-        var parsed = JSON.parse(String(reader.result || "{}"));
-        currentConfig = normalizeConfig(parsed);
-        lastRemovedRule = null;
-        undoRemoveButton.hidden = true;
+      importFile.value = "";
+    });
+  }
 
-        saveConfig(function () {
-          render();
-          showFeedback("Configuracao importada.", false);
-        });
-      } catch (error) {
-        showFeedback("Arquivo JSON invalido.", true);
-      } finally {
-        importFile.value = "";
-      }
-    };
-
-    reader.readAsText(file);
-  });
-
-  loadConfig(function (config) {
-    currentConfig = normalizeConfig(config);
-    switchTab("rules");
+  wireEvents();
+  storageApi.loadConfig(function (config) {
+    currentConfig = schema.normalizeConfig(config);
+    tabController.switchTab("rules");
     render();
   });
 })();
