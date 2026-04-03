@@ -93,8 +93,66 @@
   function createPageAlertRenderer(options) {
     var borderId = options.borderId;
     var bannerId = options.bannerId;
+    var floatingToggleId = bannerId + "-floating-toggle";
     var bodyBasePaddingBottomAttr = options.bodyBasePaddingBottomAttr;
     var bodyInlinePaddingBottomAttr = options.bodyInlinePaddingBottomAttr;
+    var bannerOutsideClickHandler = null;
+    var bannerEscapeHandler = null;
+    var bannerIsMinimized = false;
+
+    function stripPrefix(text, prefix) {
+      if (typeof text !== "string") return "";
+      return text.indexOf(prefix) === 0 ? text.slice(prefix.length) : text;
+    }
+
+    function buildDetailsRows(container, details) {
+      if (!container) return;
+      container.innerHTML = "";
+
+      var rows = [
+        {
+          label: "Regra",
+          value: stripPrefix(details && details.ruleText, "Regra aplicada: "),
+        },
+        {
+          label: "Perfil",
+          value: stripPrefix(details && details.profileText, "Perfil: "),
+        },
+        {
+          label: "URL",
+          value: stripPrefix(details && details.urlText, "URL detectada: "),
+        },
+      ];
+
+      rows.forEach(function (row) {
+        if (!row.value) return;
+
+        var item = document.createElement("div");
+        item.style.marginTop = "8px";
+
+        var label = document.createElement("div");
+        label.textContent = row.label;
+        label.style.fontSize = "11px";
+        label.style.fontWeight = "700";
+        label.style.textTransform = "uppercase";
+        label.style.letterSpacing = "0.04em";
+        label.style.color = "#4b5563";
+
+        var value = document.createElement("div");
+        value.textContent = row.value;
+        value.style.marginTop = "2px";
+        value.style.fontSize = "12px";
+        value.style.fontWeight = "500";
+        value.style.color = "#111827";
+        value.style.whiteSpace = "normal";
+        value.style.overflowWrap = "anywhere";
+        value.style.wordBreak = "break-word";
+
+        item.appendChild(label);
+        item.appendChild(value);
+        container.appendChild(item);
+      });
+    }
 
     /**
      * Garante a existência da borda de alerta e atualiza seu estilo.
@@ -171,6 +229,60 @@
       body.removeAttribute(bodyInlinePaddingBottomAttr);
     }
 
+    function hideFloatingToggle() {
+      var floatingButton = document.getElementById(floatingToggleId);
+      if (floatingButton) floatingButton.hidden = true;
+    }
+
+    function ensureFloatingToggle(color) {
+      var floatingButton = document.getElementById(floatingToggleId);
+      if (!floatingButton) {
+        floatingButton = document.createElement("button");
+        floatingButton.id = floatingToggleId;
+        floatingButton.type = "button";
+        floatingButton.className = "pmfm-floating-restore-button";
+        floatingButton.textContent = "GuardRail";
+        floatingButton.title = "Restaurar banner de alerta";
+        floatingButton.setAttribute("aria-label", "Restaurar banner de alerta");
+        floatingButton.style.position = "fixed";
+        floatingButton.style.left = "4px";
+        floatingButton.style.top = "4px";
+        floatingButton.style.height = "36px";
+        floatingButton.style.padding = "0 12px";
+        floatingButton.style.borderRadius = "999px";
+        floatingButton.style.border = "1px solid rgba(255, 255, 255, 0.28)";
+        floatingButton.style.color = "#ffffff";
+        floatingButton.style.fontFamily = "Segoe UI, sans-serif";
+        floatingButton.style.fontSize = "12px";
+        floatingButton.style.fontWeight = "700";
+        floatingButton.style.letterSpacing = "0.02em";
+        floatingButton.style.cursor = "pointer";
+        floatingButton.style.boxShadow = "0 10px 24px rgba(0, 0, 0, 0.32)";
+        floatingButton.style.backdropFilter = "blur(3px)";
+        floatingButton.style.zIndex = "2147483647";
+
+        floatingButton.addEventListener("click", function () {
+          var banner = document.getElementById(bannerId);
+          if (!banner) return;
+          bannerIsMinimized = false;
+          banner.hidden = false;
+          banner.style.display = "block";
+          floatingButton.hidden = true;
+          applyBannerCompensation(banner.offsetHeight || 0);
+        });
+
+        document.documentElement.appendChild(floatingButton);
+      }
+
+      floatingButton.hidden = false;
+      floatingButton.style.background =
+        "linear-gradient(135deg, " +
+        color +
+        " 0%, rgba(15, 23, 42, 0.88) 100%)";
+
+      return floatingButton;
+    }
+
     /**
      * Garante a existência do banner de alerta e atualiza seu conteúdo visual.
      *
@@ -181,14 +293,16 @@
     function ensureBanner(text, color, details) {
       var banner = document.getElementById(bannerId);
       var title = null;
-      var detailsLine = null;
+      var detailsButton = null;
+      var minimizeButton = null;
+      var detailsPopup = null;
       if (!banner) {
         banner = document.createElement("div");
         banner.id = bannerId;
         banner.setAttribute("aria-live", "polite");
         banner.style.display = "block";
         banner.style.width = "100%";
-        banner.style.padding = "8px 12px";
+        banner.style.padding = "4px 12px";
         banner.style.textAlign = "center";
         banner.style.fontFamily = "Segoe UI, sans-serif";
         banner.style.fontSize = "13px";
@@ -196,22 +310,131 @@
         banner.style.letterSpacing = "0.02em";
         banner.style.color = "#ffffff";
         banner.style.boxSizing = "border-box";
+        banner.style.position = "relative";
+
+        var titleRow = document.createElement("div");
+        titleRow.className = "pmfm-banner-title-row";
+        titleRow.style.display = "inline-flex";
+        titleRow.style.alignItems = "center";
+        titleRow.style.justifyContent = "center";
+        titleRow.style.gap = "8px";
 
         title = document.createElement("div");
         title.className = "pmfm-banner-title";
-        banner.appendChild(title);
+        titleRow.appendChild(title);
 
-        detailsLine = document.createElement("small");
-        detailsLine.className = "pmfm-banner-details";
-        detailsLine.style.display = "block";
-        detailsLine.style.marginTop = "4px";
-        detailsLine.style.fontWeight = "500";
-        detailsLine.style.fontSize = "11px";
-        detailsLine.style.opacity = "0.95";
-        detailsLine.style.whiteSpace = "nowrap";
-        detailsLine.style.overflow = "hidden";
-        detailsLine.style.textOverflow = "ellipsis";
-        banner.appendChild(detailsLine);
+        detailsButton = document.createElement("button");
+        detailsButton.type = "button";
+        detailsButton.className = "pmfm-banner-help-button";
+        detailsButton.textContent = "?";
+        detailsButton.setAttribute(
+          "aria-label",
+          "Mostrar detalhes da regra aplicada",
+        );
+        detailsButton.setAttribute("aria-expanded", "false");
+        detailsButton.title = "Ver detalhes da regra aplicada";
+        detailsButton.style.width = "24px";
+        detailsButton.style.height = "24px";
+        detailsButton.style.minHeight = "auto";
+        detailsButton.style.borderRadius = "999px";
+        detailsButton.style.display = "flex";
+        detailsButton.style.alignItems = "center";
+        detailsButton.style.justifyContent = "center";
+        detailsButton.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
+        detailsButton.style.backdropFilter = "blur(4px)";
+        detailsButton.style.color = "#ffffff";
+        detailsButton.style.fontSize = "14px";
+        detailsButton.style.fontWeight = "700";
+        detailsButton.style.cursor = "pointer";
+        detailsButton.style.lineHeight = "1";
+        detailsButton.style.padding = "0";
+        detailsButton.style.boxShadow = "0 3px 10px rgba(15, 23, 42, 0.25)";
+        titleRow.appendChild(detailsButton);
+
+        minimizeButton = document.createElement("button");
+        minimizeButton.type = "button";
+        minimizeButton.className = "pmfm-banner-minimize-button";
+        minimizeButton.textContent = "−";
+        minimizeButton.setAttribute("aria-label", "Minimizar banner de alerta");
+        minimizeButton.title = "Minimizar banner";
+        minimizeButton.style.width = "24px";
+        minimizeButton.style.height = "24px";
+        minimizeButton.style.minHeight = "auto";
+        minimizeButton.style.borderRadius = "999px";
+        minimizeButton.style.display = "flex";
+        minimizeButton.style.alignItems = "center";
+        minimizeButton.style.justifyContent = "center";
+        minimizeButton.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
+        minimizeButton.style.backdropFilter = "blur(4px)";
+        minimizeButton.style.color = "#ffffff";
+        minimizeButton.style.fontSize = "16px";
+        minimizeButton.style.fontWeight = "700";
+        minimizeButton.style.cursor = "pointer";
+        minimizeButton.style.lineHeight = "1";
+        minimizeButton.style.padding = "0";
+        minimizeButton.style.boxShadow = "0 3px 10px rgba(15, 23, 42, 0.25)";
+        titleRow.appendChild(minimizeButton);
+
+        banner.appendChild(titleRow);
+
+        detailsPopup = document.createElement("div");
+        detailsPopup.className = "pmfm-banner-popup";
+        detailsPopup.hidden = true;
+        detailsPopup.style.position = "absolute";
+        detailsPopup.style.top = "calc(100% + 6px)";
+        detailsPopup.style.right = "12px";
+        detailsPopup.style.maxWidth = "min(560px, calc(100vw - 24px))";
+        detailsPopup.style.padding = "10px 12px";
+        detailsPopup.style.borderRadius = "8px";
+        detailsPopup.style.background = "#ffffff";
+        detailsPopup.style.color = "#1f2937";
+        detailsPopup.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.2)";
+        detailsPopup.style.border = "1px solid rgba(15, 23, 42, 0.12)";
+        detailsPopup.style.fontSize = "12px";
+        detailsPopup.style.lineHeight = "1.45";
+        detailsPopup.style.fontWeight = "500";
+        detailsPopup.style.textAlign = "left";
+        detailsPopup.style.whiteSpace = "normal";
+        detailsPopup.style.zIndex = "2147483647";
+        banner.appendChild(detailsPopup);
+
+        detailsButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          var opening = detailsPopup.hidden;
+          detailsPopup.hidden = !opening;
+          detailsButton.setAttribute(
+            "aria-expanded",
+            opening ? "true" : "false",
+          );
+        });
+
+        minimizeButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          bannerIsMinimized = true;
+          detailsPopup.hidden = true;
+          detailsButton.setAttribute("aria-expanded", "false");
+          banner.hidden = true;
+          banner.style.display = "none";
+          clearBannerCompensation();
+          ensureFloatingToggle(color);
+        });
+
+        bannerOutsideClickHandler = function (event) {
+          if (detailsPopup.hidden) return;
+          if (detailsPopup.contains(event.target)) return;
+          if (detailsButton.contains(event.target)) return;
+          detailsPopup.hidden = true;
+          detailsButton.setAttribute("aria-expanded", "false");
+        };
+        document.addEventListener("click", bannerOutsideClickHandler);
+
+        bannerEscapeHandler = function (event) {
+          if (event.key !== "Escape") return;
+          if (detailsPopup.hidden) return;
+          detailsPopup.hidden = true;
+          detailsButton.setAttribute("aria-expanded", "false");
+        };
+        document.addEventListener("keydown", bannerEscapeHandler);
 
         if (document.body) {
           document.body.insertBefore(banner, document.body.firstChild);
@@ -221,7 +444,11 @@
       }
 
       title = title || banner.querySelector(".pmfm-banner-title");
-      detailsLine = detailsLine || banner.querySelector(".pmfm-banner-details");
+      detailsButton =
+        detailsButton || banner.querySelector(".pmfm-banner-help-button");
+      minimizeButton =
+        minimizeButton || banner.querySelector(".pmfm-banner-minimize-button");
+      detailsPopup = detailsPopup || banner.querySelector(".pmfm-banner-popup");
 
       banner.style.background = color;
       if (title) {
@@ -230,17 +457,41 @@
         banner.textContent = text;
       }
 
-      if (detailsLine && details) {
+      if (detailsButton && detailsPopup) {
         var detailText = [
-          details.ruleText,
-          details.profileText,
-          details.urlText,
+          details && details.ruleText,
+          details && details.profileText,
+          details && details.urlText,
         ]
           .filter(Boolean)
           .join(" | ");
-        detailsLine.textContent = detailText;
-        detailsLine.title = detailText;
+
+        if (detailText) {
+          detailsButton.hidden = false;
+          buildDetailsRows(detailsPopup, details);
+          detailsPopup.title = detailText;
+        } else {
+          detailsPopup.hidden = true;
+          detailsButton.hidden = true;
+          detailsButton.setAttribute("aria-expanded", "false");
+        }
       }
+
+      if (minimizeButton) {
+        minimizeButton.hidden = false;
+      }
+
+      if (bannerIsMinimized) {
+        banner.hidden = true;
+        banner.style.display = "none";
+        clearBannerCompensation();
+        ensureFloatingToggle(color);
+        return;
+      }
+
+      banner.hidden = false;
+      banner.style.display = "block";
+      hideFloatingToggle();
 
       applyBannerCompensation(banner.offsetHeight || 0);
     }
@@ -251,6 +502,22 @@
     function removeBanner() {
       var banner = document.getElementById(bannerId);
       if (banner) banner.remove();
+
+      var floatingButton = document.getElementById(floatingToggleId);
+      if (floatingButton) floatingButton.remove();
+
+      bannerIsMinimized = false;
+
+      if (bannerOutsideClickHandler) {
+        document.removeEventListener("click", bannerOutsideClickHandler);
+        bannerOutsideClickHandler = null;
+      }
+
+      if (bannerEscapeHandler) {
+        document.removeEventListener("keydown", bannerEscapeHandler);
+        bannerEscapeHandler = null;
+      }
+
       clearBannerCompensation();
     }
 
