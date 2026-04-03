@@ -27,6 +27,8 @@
   var addCurrentUrlBtn = document.getElementById("add-current-url");
 
   var profileList = document.getElementById("profile-list");
+  var addProfileButton = document.getElementById("add-profile");
+  var customProfileNameInput = document.getElementById("custom-profile-name");
   var borderWidth = document.getElementById("border-width");
   var borderStyle = document.getElementById("border-style");
   var bannerEnabled = document.getElementById("banner-enabled");
@@ -54,6 +56,10 @@
 
   var currentConfig = null;
   var lastRemovedRule = null;
+  var defaultProfileIds = schema.DEFAULT_PROFILES.reduce(function (acc, item) {
+    acc[item.id] = true;
+    return acc;
+  }, Object.create(null));
 
   /**
    * Exibe uma mensagem de retorno no topo do popup.
@@ -199,9 +205,130 @@
 
       controls.appendChild(colorInput);
       controls.appendChild(toggle);
+
+      if (!defaultProfileIds[profile.id]) {
+        var removeProfileButton = document.createElement("button");
+        removeProfileButton.type = "button";
+        removeProfileButton.className = "profile-item__remove";
+        removeProfileButton.textContent = "Remover";
+        removeProfileButton.addEventListener("click", function () {
+          removeCustomProfile(profile.id);
+        });
+        controls.appendChild(removeProfileButton);
+      }
+
       item.appendChild(left);
       item.appendChild(controls);
       profileList.appendChild(item);
+    });
+  }
+
+  /**
+   * Gera um identificador para contexto personalizado.
+   *
+   * @returns {string} Id único no formato profile-<tempo>-<aleatorio>.
+   */
+  function makeProfileId() {
+    return (
+      "profile-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8)
+    );
+  }
+
+  /**
+   * Adiciona um novo contexto personalizado.
+   *
+   * @param {string} name Nome informado para o novo contexto.
+   */
+  function addCustomProfile(name) {
+    var cleanedName = schema.sanitizeText(name);
+    if (!cleanedName) {
+      showFeedback("Informe um nome para o contexto.", true);
+      return;
+    }
+
+    var alreadyExists = currentConfig.profiles.some(function (profile) {
+      return profile.name.toLowerCase() === cleanedName.toLowerCase();
+    });
+
+    if (alreadyExists) {
+      showFeedback("Já existe um contexto com esse nome.", true);
+      return;
+    }
+
+    var profileId = makeProfileId();
+    currentConfig.profiles = currentConfig.profiles.concat({
+      id: profileId,
+      name: cleanedName,
+      enabled: true,
+    });
+
+    currentConfig.profileStyles[profileId] = {
+      color: "#d40000",
+      bannerText: cleanedName,
+    };
+
+    saveConfig(function () {
+      render();
+      profileInput.value = profileId;
+      customProfileNameInput.value = "";
+      customProfileNameInput.focus();
+      showFeedback("Contexto personalizado criado.", false);
+    });
+  }
+
+  /**
+   * Remove um contexto personalizado e move regras para um contexto de fallback.
+   *
+   * @param {string} profileId Id do contexto a ser removido.
+   */
+  function removeCustomProfile(profileId) {
+    if (defaultProfileIds[profileId]) {
+      showFeedback("Não é permitido remover contextos padrão.", true);
+      return;
+    }
+
+    var profileToRemove = currentConfig.profiles.find(function (profile) {
+      return profile.id === profileId;
+    });
+    if (!profileToRemove) return;
+
+    if (!window.confirm('Remover o contexto "' + profileToRemove.name + '"?')) {
+      return;
+    }
+
+    var remainingProfiles = currentConfig.profiles.filter(function (profile) {
+      return profile.id !== profileId;
+    });
+
+    if (!remainingProfiles.length) {
+      showFeedback("É necessário manter pelo menos um contexto.", true);
+      return;
+    }
+
+    var fallbackProfileId = remainingProfiles[0].id;
+
+    currentConfig.rules = currentConfig.rules.map(function (rule) {
+      if (rule.profileId !== profileId) return rule;
+      return {
+        id: rule.id,
+        type: rule.type,
+        value: rule.value,
+        profileId: fallbackProfileId,
+      };
+    });
+
+    currentConfig.profiles = remainingProfiles;
+    delete currentConfig.profileStyles[profileId];
+
+    saveConfig(function () {
+      render();
+      if (profileInput.value === profileId) {
+        profileInput.value = fallbackProfileId;
+      }
+      showFeedback(
+        "Contexto removido. Regras vinculadas foram movidas para outro contexto.",
+        false,
+      );
     });
   }
 
@@ -391,6 +518,16 @@
 
     borderWidth.addEventListener("change", saveBorderStyle);
     borderStyle.addEventListener("change", saveBorderStyle);
+
+    addProfileButton.addEventListener("click", function () {
+      addCustomProfile(customProfileNameInput.value);
+    });
+
+    customProfileNameInput.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      addCustomProfile(customProfileNameInput.value);
+    });
 
     bannerEnabled.addEventListener("change", function () {
       currentConfig.bannerEnabled = bannerEnabled.checked;
