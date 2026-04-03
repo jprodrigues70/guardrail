@@ -20,20 +20,85 @@
     var buildConfigFromLegacy = options.buildConfigFromLegacy;
 
     /**
+     * Verifica se o erro recebido indica contexto de extensão invalidado.
+     *
+     * Esse cenário ocorre com frequência quando a extensão é recarregada,
+     * mas a aba ainda executa uma instância antiga do content script.
+     *
+     * @param {Error|object|string} error Erro capturado.
+     * @returns {boolean} Verdadeiro quando o contexto foi invalidado.
+     */
+    function isContextInvalidatedError(error) {
+      var message = "";
+
+      if (typeof error === "string") {
+        message = error;
+      } else if (error && typeof error.message === "string") {
+        message = error.message;
+      }
+
+      return message.indexOf("Extension context invalidated") !== -1;
+    }
+
+    /**
+     * Verifica se a API de storage está disponível no contexto atual.
+     *
+     * @returns {boolean} Verdadeiro quando é seguro usar chrome.storage.sync.
+     */
+    function canUseStorageApi() {
+      return Boolean(
+        typeof chrome === "object" &&
+        chrome &&
+        chrome.storage &&
+        chrome.storage.sync,
+      );
+    }
+
+    /**
+     * Executa callback somente quando ele é uma função válida.
+     *
+     * @param {Function} callback Callback opcional.
+     * @param {*} arg Argumento opcional para callback.
+     */
+    function safeCall(callback, arg) {
+      if (typeof callback === "function") callback(arg);
+    }
+
+    /**
      * Salva a configuração já normalizada no armazenamento sincronizado.
      *
      * @param {object} config Configuração a ser persistida.
      * @param {Function} callback Callback opcional pós-gravação.
      */
     function saveConfig(config, callback) {
-      chrome.storage.sync.set(
-        (function () {
-          var payload = {};
-          payload[storageKey] = normalizeConfig(config);
-          return payload;
-        })(),
-        callback,
-      );
+      if (!canUseStorageApi()) {
+        safeCall(callback);
+        return;
+      }
+
+      try {
+        chrome.storage.sync.set(
+          (function () {
+            var payload = {};
+            payload[storageKey] = normalizeConfig(config);
+            return payload;
+          })(),
+          function () {
+            if (
+              chrome.runtime &&
+              chrome.runtime.lastError &&
+              isContextInvalidatedError(chrome.runtime.lastError)
+            ) {
+              return;
+            }
+
+            safeCall(callback);
+          },
+        );
+      } catch (error) {
+        if (isContextInvalidatedError(error)) return;
+        throw error;
+      }
     }
 
     /**
@@ -46,17 +111,37 @@
       defaults[storageKey] = null;
       defaults[legacyKey] = [];
 
-      chrome.storage.sync.get(defaults, function (result) {
-        if (result[storageKey]) {
-          callback(normalizeConfig(result[storageKey]));
-          return;
-        }
+      if (!canUseStorageApi()) {
+        safeCall(callback, normalizeConfig(buildConfigFromLegacy([])));
+        return;
+      }
 
-        var migrated = buildConfigFromLegacy(result[legacyKey]);
-        saveConfig(migrated, function () {
-          callback(normalizeConfig(migrated));
+      try {
+        chrome.storage.sync.get(defaults, function (result) {
+          if (
+            chrome.runtime &&
+            chrome.runtime.lastError &&
+            isContextInvalidatedError(chrome.runtime.lastError)
+          ) {
+            return;
+          }
+
+          var data = result || defaults;
+
+          if (data[storageKey]) {
+            safeCall(callback, normalizeConfig(data[storageKey]));
+            return;
+          }
+
+          var migrated = buildConfigFromLegacy(data[legacyKey]);
+          saveConfig(migrated, function () {
+            safeCall(callback, normalizeConfig(migrated));
+          });
         });
-      });
+      } catch (error) {
+        if (isContextInvalidatedError(error)) return;
+        throw error;
+      }
     }
 
     /**
@@ -65,11 +150,18 @@
      * @param {Function} handler Callback acionado quando há alteração de configuração.
      */
     function onConfigChanged(handler) {
-      chrome.storage.onChanged.addListener(function (changes, areaName) {
-        if (areaName !== "sync") return;
-        if (!changes[storageKey] && !changes[legacyKey]) return;
-        handler(changes);
-      });
+      if (!canUseStorageApi()) return;
+
+      try {
+        chrome.storage.onChanged.addListener(function (changes, areaName) {
+          if (areaName !== "sync") return;
+          if (!changes[storageKey] && !changes[legacyKey]) return;
+          safeCall(handler, changes);
+        });
+      } catch (error) {
+        if (isContextInvalidatedError(error)) return;
+        throw error;
+      }
     }
 
     return {
