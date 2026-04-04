@@ -27,6 +27,8 @@
 
   var lastKnownHref = window.location.href;
   var urlPollTimer = null;
+  var currentContentConfig = null;
+  var lastSourceFingerprint = "";
 
   var storageApi = storageModule.createStorageApi({
     storageKey: schema.STORAGE_KEY,
@@ -43,6 +45,29 @@
   });
 
   /**
+   * Calcula uma impressão digital dos valores de fontes não-URL das regras.
+   *
+   * Usada para detectar mudanças em localStorage ou cookies entre ciclos
+   * de polling, disparando reavaliação apenas quando necessário.
+   *
+   * @param {object} config Configuração normalizada.
+   * @returns {string} Fingerprint concatenado dos valores lidos.
+   */
+  function computeSourceFingerprint(config) {
+    if (!config || !config.rules || !config.rules.length) return "";
+    var parts = [];
+    for (var i = 0; i < config.rules.length; i++) {
+      var rule = config.rules[i];
+      if (!rule.source || rule.source === "url") continue;
+      var val = ruleMatcher.readSourceValue(rule);
+      parts.push(
+        rule.source + ":" + rule.sourceKey + "=" + (val === null ? "\0" : val),
+      );
+    }
+    return parts.join("|");
+  }
+
+  /**
    * Aplica a configuração da extensão na página atual.
    *
    * A função identifica a primeira regra correspondente à URL, resolve o
@@ -52,6 +77,8 @@
    * @param {object} config Configuração normalizada carregada do storage.
    */
   function applyConfig(config) {
+    currentContentConfig = config;
+    lastSourceFingerprint = computeSourceFingerprint(config);
     var matchDetails = ruleMatcher.getMatchDetails(
       config,
       window.location.href,
@@ -76,19 +103,30 @@
     pageRenderer.ensureBorder(config.style, profileStyle.color);
 
     if (config.bannerEnabled) {
+      var details = {
+        ruleText:
+          "Regra aplicada: " +
+          matchDetails.reason.matchType +
+          ' "' +
+          matchDetails.reason.ruleValue +
+          '"',
+        profileText: "Perfil: " + profileName,
+        urlText: "URL detectada: " + matchDetails.reason.detectedUrl,
+      };
+
+      if (matchDetails.reason.source) {
+        details.sourceText =
+          "Fonte: " +
+          matchDetails.reason.source +
+          " (chave: " +
+          matchDetails.reason.sourceKey +
+          ")";
+      }
+
       pageRenderer.ensureBanner(
         profileStyle.bannerText || config.bannerText,
         profileStyle.color,
-        {
-          ruleText:
-            "Regra aplicada: " +
-            matchDetails.reason.matchType +
-            ' "' +
-            matchDetails.reason.ruleValue +
-            '"',
-          profileText: "Perfil: " + profileName,
-          urlText: "URL detectada: " + matchDetails.reason.detectedUrl,
-        },
+        details,
         {
           alwaysMinimized: Boolean(config.bannerAlwaysMinimized),
         },
@@ -118,9 +156,18 @@
    */
   function onPossibleUrlChange() {
     var currentHref = window.location.href;
-    if (currentHref === lastKnownHref) return;
-    lastKnownHref = currentHref;
-    updateFromStorage();
+    var hrefChanged = currentHref !== lastKnownHref;
+
+    if (hrefChanged) {
+      lastKnownHref = currentHref;
+    }
+
+    var fingerprint = computeSourceFingerprint(currentContentConfig);
+    var sourceChanged = fingerprint !== lastSourceFingerprint;
+
+    if (hrefChanged || sourceChanged) {
+      updateFromStorage();
+    }
   }
 
   /**
@@ -168,6 +215,14 @@
 
   storageApi.onConfigChanged(function () {
     updateFromStorage();
+  });
+
+  window.addEventListener("storage", function (event) {
+    if (!currentContentConfig || !currentContentConfig.rules) return;
+    var isRelevantKey = currentContentConfig.rules.some(function (rule) {
+      return rule.source === "localStorage" && rule.sourceKey === event.key;
+    });
+    if (isRelevantKey) updateFromStorage();
   });
 
   setupSpaUrlObserver();

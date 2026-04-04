@@ -115,6 +115,10 @@
 
       var rows = [
         {
+          label: "Fonte",
+          value: stripPrefix(details && details.sourceText, "Fonte: "),
+        },
+        {
           label: "Regra",
           value: stripPrefix(details && details.ruleText, "Regra aplicada: "),
         },
