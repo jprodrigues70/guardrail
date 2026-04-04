@@ -27,6 +27,11 @@
   var profileInput = document.getElementById("rule-profile");
   var groupByInput = document.getElementById("rules-group-by");
   var addCurrentUrlBtn = document.getElementById("add-current-url");
+  var sourceInput = document.getElementById("rule-source");
+  var sourceKeyInput = document.getElementById("rule-source-key");
+  var sourceKeyGroup = document.getElementById("source-key-group");
+  var sourceHelper = document.getElementById("source-helper");
+  var ruleTypeDomainOption = document.getElementById("rule-type-domain");
 
   var profileList = document.getElementById("profile-list");
   var addProfileButton = document.getElementById("add-profile");
@@ -115,6 +120,10 @@
       currentConfig.bannerAlwaysMinimized,
     );
     confirmDeleteInput.checked = currentConfig.confirmDelete;
+
+    sourceInput.value = "url";
+    sourceKeyInput.value = "";
+    updateSourceUI();
   }
 
   /**
@@ -318,13 +327,16 @@
 
     currentConfig.rules = currentConfig.rules.map(function (rule) {
       if (rule.profileId !== profileId) return rule;
-      return {
+      var reassigned = {
         id: rule.id,
         type: rule.type,
         value: rule.value,
         tag: rule.tag,
         profileId: fallbackProfileId,
       };
+      if (rule.source) reassigned.source = rule.source;
+      if (rule.sourceKey) reassigned.sourceKey = rule.sourceKey;
+      return reassigned;
     });
 
     currentConfig.profiles = remainingProfiles;
@@ -377,14 +389,30 @@
 
         var text = document.createElement("span");
         text.className = "rule-item__text";
-        text.textContent =
-          "[" +
-          schema.RULE_TYPES[rule.type] +
-          "] " +
-          rule.value +
-          " (" +
-          profilesModule.getProfileName(currentConfig, rule.profileId) +
-          ")";
+
+        if (rule.source && rule.source !== "url") {
+          var sourceBadge = document.createElement("span");
+          sourceBadge.className = "rule-source-badge";
+          sourceBadge.textContent = rule.source + ":" + rule.sourceKey;
+          text.appendChild(sourceBadge);
+        }
+
+        var typeLabel =
+          rule.source && rule.source !== "url" && rule.type === "domain"
+            ? "Igual a"
+            : schema.RULE_TYPES[rule.type];
+
+        text.appendChild(
+          document.createTextNode(
+            "[" +
+              typeLabel +
+              "] " +
+              rule.value +
+              " (" +
+              profilesModule.getProfileName(currentConfig, rule.profileId) +
+              ")",
+          ),
+        );
 
         if (rule.tag) {
           var tagBadge = document.createElement("span");
@@ -466,6 +494,9 @@
     }
 
     if (groupBy === "domain") {
+      if (rule.source && rule.source !== "url") {
+        return "Fonte: " + rule.source + ":" + rule.sourceKey;
+      }
       var base = toBaseDomain(extractHostname(rule.value));
       return "Domínio-base: " + (base || "(não identificado)");
     }
@@ -500,12 +531,19 @@
    * @param {string} profileId Identificador do perfil associado à regra.
    * @param {string} tag Tag opcional para categorização da regra.
    */
-  function addRule(value, type, profileId, tag) {
+  function addRule(value, type, profileId, tag, source, sourceKey) {
     var text = schema.sanitizeText(value);
     var normalizedTag = schema.sanitizeText(tag);
+    var normalizedSource = source || "url";
+    var normalizedSourceKey = schema.sanitizeText(sourceKey);
 
     if (!text) {
       showFeedback("Informe um valor de regra válido.", true);
+      return;
+    }
+
+    if (normalizedSource !== "url" && !normalizedSourceKey) {
+      showFeedback("Informe a chave da fonte.", true);
       return;
     }
 
@@ -520,6 +558,8 @@
 
     var exists = currentConfig.rules.some(function (rule) {
       return (
+        (rule.source || "url") === normalizedSource &&
+        (rule.sourceKey || "") === normalizedSourceKey &&
         rule.type === type &&
         rule.profileId === profileId &&
         rule.value.toLowerCase() === text.toLowerCase()
@@ -531,17 +571,26 @@
       return;
     }
 
-    currentConfig.rules = currentConfig.rules.concat({
+    var newRule = {
       id: schema.makeId(),
       type: type,
       value: text,
       tag: normalizedTag,
       profileId: profileId,
-    });
+    };
+
+    if (normalizedSource !== "url") {
+      newRule.source = normalizedSource;
+      newRule.sourceKey = normalizedSourceKey;
+    }
+
+    currentConfig.rules = currentConfig.rules.concat(newRule);
 
     saveConfig(function () {
       render();
       form.reset();
+      sourceInput.value = "url";
+      updateSourceUI();
       typeInput.value = "startsWith";
       profileInput.value = profileId;
       groupByInput.value = currentGroupBy;
@@ -568,6 +617,37 @@
   }
 
   /**
+   * Atualiza a interface do formulário conforme a fonte selecionada.
+   *
+   * Exibe ou oculta o campo de chave, ajusta placeholder do valor,
+   * altera o rótulo do tipo "domain" e mostra texto auxiliar relevante.
+   */
+  function updateSourceUI() {
+    var source = sourceInput.value;
+    var isNonUrl = source !== "url";
+
+    sourceKeyGroup.hidden = !isNonUrl;
+    addCurrentUrlBtn.hidden = isNonUrl;
+
+    if (source === "localStorage") {
+      valueInput.placeholder = "Ex: production";
+      sourceHelper.textContent =
+        "Verifica o valor armazenado em localStorage com a chave informada.";
+      sourceHelper.hidden = false;
+    } else if (source === "cookie") {
+      valueInput.placeholder = "Ex: acme-corp";
+      sourceHelper.textContent =
+        "Verifica o valor do cookie com o nome informado. Cookies HttpOnly não são acessíveis.";
+      sourceHelper.hidden = false;
+    } else {
+      valueInput.placeholder = "Ex: https://app.exemplo.com/";
+      sourceHelper.hidden = true;
+    }
+
+    ruleTypeDomainOption.textContent = isNonUrl ? "Igual a" : "Domínio exato";
+  }
+
+  /**
    * Registra todos os eventos da interface do popup.
    *
    * Este método conecta ações de formulário, botões utilitários,
@@ -576,6 +656,8 @@
   function wireEvents() {
     tabController.wire();
 
+    sourceInput.addEventListener("change", updateSourceUI);
+
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       addRule(
@@ -583,6 +665,8 @@
         typeInput.value,
         profileInput.value,
         tagInput.value,
+        sourceInput.value,
+        sourceKeyInput.value,
       );
     });
 

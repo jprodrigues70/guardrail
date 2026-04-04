@@ -43,12 +43,29 @@
 
                     <div class="row two-columns">
                         <div class="field-group">
+                            <label for="rule-source">Fonte</label>
+                            <select id="rule-source">
+                                <option value="url">URL</option>
+                                <option value="localStorage">localStorage</option>
+                                <option value="cookie">Cookie</option>
+                            </select>
+                        </div>
+                        <div class="field-group" id="source-key-group" hidden>
+                            <label for="rule-source-key">Chave</label>
+                            <input id="rule-source-key" type="text" placeholder="Ex: env" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <p id="source-helper" class="helper-text" hidden></p>
+
+                    <div class="row two-columns">
+                        <div class="field-group">
                             <label for="rule-type">Tipo de comparação</label>
                             <select id="rule-type">
                                 <option value="startsWith">Começa com</option>
                                 <option value="contains">Contém</option>
                                 <option value="regex">Regex</option>
-                                <option value="domain">Domínio exato</option>
+                                <option value="domain" id="rule-type-domain">Domínio exato</option>
                             </select>
                         </div>
                         <div class="field-group">

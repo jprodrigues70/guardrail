@@ -13,6 +13,12 @@
     domain: "Domínio exato",
   };
 
+  var RULE_SOURCES = {
+    url: "URL",
+    localStorage: "localStorage",
+    cookie: "Cookie",
+  };
+
   var DEFAULT_PROFILES = [
     { id: "work", name: "Trabalho", enabled: true },
     { id: "production", name: "Produção", enabled: true },
@@ -181,22 +187,42 @@
         var tag = sanitizeText(rule && rule.tag);
         var type = sanitizeText(rule && rule.type);
         var profileId = sanitizeText(rule && rule.profileId);
+        var source = sanitizeText(rule && rule.source);
+        var sourceKey = sanitizeText(rule && rule.sourceKey);
 
         if (!text) return null;
         if (!RULE_TYPES[type]) type = "startsWith";
         if (!profileIds[profileId]) profileId = DEFAULT_PROFILES[0].id;
+        if (!RULE_SOURCES[source]) source = "url";
+        if (source !== "url" && !sourceKey) source = "url";
 
-        var dedupe = type + "::" + profileId + "::" + text.toLowerCase();
+        var dedupe =
+          source +
+          "::" +
+          sourceKey +
+          "::" +
+          type +
+          "::" +
+          profileId +
+          "::" +
+          text.toLowerCase();
         if (seen[dedupe]) return null;
         seen[dedupe] = true;
 
-        return {
+        var normalized = {
           id: sanitizeText(rule && rule.id) || makeId(),
           type: type,
           value: text,
           tag: tag,
           profileId: profileId,
         };
+
+        if (source !== "url") {
+          normalized.source = source;
+          normalized.sourceKey = sourceKey;
+        }
+
+        return normalized;
       })
       .filter(Boolean);
   }
@@ -301,6 +327,7 @@
     STORAGE_KEY: STORAGE_KEY,
     LEGACY_PREFIX_KEY: LEGACY_PREFIX_KEY,
     RULE_TYPES: RULE_TYPES,
+    RULE_SOURCES: RULE_SOURCES,
     DEFAULT_PROFILES: DEFAULT_PROFILES,
     DEFAULT_CONFIG: DEFAULT_CONFIG,
     sanitizeText: sanitizeText,
