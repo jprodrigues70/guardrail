@@ -5,15 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GuardRail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400..800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <main class="popup">
         <header class="popup__header">
-            <img src="assets/guardrail-logo.svg" alt="GuardRail" class="popup__logo">
-            <h1>GuardRail</h1>
-            <p>Regras de URL com alerta visual configurável.</p>
+            <img src="assets/guardrail-mark.svg" alt="GuardRail" class="popup__logo">
+            <div class="popup__header-text">
+                <h1>GuardRail</h1>
+                <p>Alertas visuais para ambientes sensíveis</p>
+            </div>
+            <button type="button" id="theme-toggle" class="theme-toggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </button>
         </header>
 
         <p id="feedback" class="feedback" aria-live="polite" hidden></p>
@@ -125,20 +139,31 @@
 
                 <div class="toggle-row">
                     <label for="banner-enabled">Mostrar mensagem fixa no topo</label>
-                    <input id="banner-enabled" type="checkbox" checked>
+                    <span class="toggle-switch">
+                        <input id="banner-enabled" type="checkbox" checked>
+                        <span class="toggle-track"></span>
+                    </span>
                 </div>
 
                 <div class="toggle-row">
                     <label for="banner-always-minimized">Manter banner sempre minimizado</label>
-                    <input id="banner-always-minimized" type="checkbox">
+                    <span class="toggle-switch">
+                        <input id="banner-always-minimized" type="checkbox">
+                        <span class="toggle-track"></span>
+                    </span>
                 </div>
             </section>
 
             <section class="card">
                 <div class="toggle-row">
                     <label for="confirm-delete">Confirmar antes de remover regra</label>
-                    <input id="confirm-delete" type="checkbox" checked>
+                    <span class="toggle-switch">
+                        <input id="confirm-delete" type="checkbox" checked>
+                        <span class="toggle-track"></span>
+                    </span>
                 </div>
+
+                <hr class="card-separator">
 
                 <div class="row actions">
                     <button type="button" id="export-config" class="btn">Exportar JSON</button>

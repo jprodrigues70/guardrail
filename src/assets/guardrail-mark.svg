@@ -5,8 +5,8 @@
 
     <defs>
         <linearGradient id="shieldGrad" x1="16" y1="8" x2="112" y2="120" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#1D4ED8" />
-            <stop offset="1" stop-color="#0F172A" />
+            <stop offset="0" stop-color="#2563eb" />
+            <stop offset="1" stop-color="#1e3a5f" />
         </linearGradient>
         <linearGradient id="railGrad" x1="38" y1="32" x2="96" y2="96" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="#F97316" />

@@ -48,6 +48,9 @@
   var ruleList = document.getElementById("rule-list");
   var emptyState = document.getElementById("empty-state");
   var feedback = document.getElementById("feedback");
+  var themeToggle = document.getElementById("theme-toggle");
+
+  var DARK_MODE_KEY = "pmfmDarkMode";
 
   var storageApi = storageModule.createStorageApi({
     storageKey: schema.STORAGE_KEY,
@@ -551,6 +554,56 @@
   }
 
   /**
+   * Aplica o tema visual na página do popup.
+   *
+   * @param {boolean} isDark Verdadeiro para tema escuro.
+   */
+  function applyTheme(isDark) {
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDark ? "dark" : "light",
+    );
+  }
+
+  /**
+   * Carrega a preferência de tema do armazenamento e aplica.
+   */
+  function loadTheme() {
+    if (
+      typeof chrome === "object" &&
+      chrome &&
+      chrome.storage &&
+      chrome.storage.sync
+    ) {
+      var defaults = {};
+      defaults[DARK_MODE_KEY] = false;
+      chrome.storage.sync.get(defaults, function (result) {
+        applyTheme(Boolean(result[DARK_MODE_KEY]));
+      });
+    }
+  }
+
+  /**
+   * Alterna entre tema claro e escuro e persiste a escolha.
+   */
+  function toggleTheme() {
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    var newIsDark = !isDark;
+    applyTheme(newIsDark);
+
+    if (
+      typeof chrome === "object" &&
+      chrome &&
+      chrome.storage &&
+      chrome.storage.sync
+    ) {
+      var payload = {};
+      payload[DARK_MODE_KEY] = newIsDark;
+      chrome.storage.sync.set(payload);
+    }
+  }
+
+  /**
    * Normaliza e salva as preferências visuais da borda de alerta.
    *
    * É acionado ao alterar espessura ou estilo, garantindo que apenas valores
@@ -575,6 +628,8 @@
    */
   function wireEvents() {
     tabController.wire();
+
+    themeToggle.addEventListener("click", toggleTheme);
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -706,6 +761,7 @@
     });
   }
 
+  loadTheme();
   wireEvents();
   storageApi.loadConfig(function (config) {
     currentConfig = schema.normalizeConfig(config);
